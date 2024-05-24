@@ -1,18 +1,17 @@
-
 import 'package:queue_system/data/response/status.dart';
+import 'package:queue_system/routes/app_pages.dart';
 import 'package:queue_system/view_models/controller/admin_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CustomerController extends GetxController {
   final adminController = Get.put(AdminController());
   RxString error = ''.obs;
   final rxRequestStatus = Status.COMPLETED.obs;
-  late final player = Player();
-  late final controllerVideo = VideoController(player);
 
   var currentDate = ''.obs;
   var currentTime = ''.obs;
@@ -33,19 +32,17 @@ class CustomerController extends GetxController {
     toggleVisibility();
     play();
     sizeCardQueue();
-
   }
 
   @override
   void dispose() {
-    player.dispose();
-
+    adminController.player.dispose();
     super.dispose();
   }
 
   @override
   void onClose() {
-    player.dispose();
+    adminController.player.dispose();
     super.onClose();
   }
 
@@ -67,11 +64,11 @@ class CustomerController extends GetxController {
         assetsUrls.map((url) => Media(url)).toList(),
       );
 
-      await player.open(
+      await adminController.player.open(
         playable,
         play: true,
       );
-      await player.setPlaylistMode(PlaylistMode.loop);
+      await adminController.player.setPlaylistMode(PlaylistMode.loop);
     }
   }
 

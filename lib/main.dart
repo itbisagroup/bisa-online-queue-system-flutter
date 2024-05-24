@@ -1,6 +1,5 @@
 import 'dart:io';
 
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,7 +8,7 @@ import 'package:media_kit/media_kit.dart';
 import 'package:queue_system/routes/app_pages.dart';
 import 'package:queue_system/utils/constan.dart';
 import 'package:sizer/sizer.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MyHttpOverrides extends HttpOverrides {
   @override
@@ -23,7 +22,11 @@ class MyHttpOverrides extends HttpOverrides {
 Future main() async {
   HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
-
+  await Supabase.initialize(
+    url: 'https://ofzthdnbmmyoqmclyhvk.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9menRoZG5ibW15b3FtY2x5aHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU5MzA0MjIsImV4cCI6MjAzMTUwNjQyMn0.0-Q59gfj4m8qk_OgvE6NOK4E6MNl54rSEEQa90-uyBY',
+  );
   MediaKit.ensureInitialized();
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -37,9 +40,8 @@ class QueueApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Sizer(
-      builder: (context, orientation, deviceType) {
-        return GetMaterialApp(
+    return Sizer(builder: (context, orientation, deviceType) {
+      return GetMaterialApp(
         initialRoute: AppPages.initial,
         getPages: AppPages.routes,
         debugShowCheckedModeBanner: false,
@@ -54,8 +56,6 @@ class QueueApp extends StatelessWidget {
           ),
         ),
       );
-      }
-    );
+    });
   }
 }
-

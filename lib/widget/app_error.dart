@@ -28,7 +28,7 @@ class TimeOut extends StatelessWidget {
                 height: 20,
               ),
               const AppText(
-                text: 'Something go wrong!',
+                text: ' Request Time Out!',
                 fontSize: 16,
               ),
               SizedBox(

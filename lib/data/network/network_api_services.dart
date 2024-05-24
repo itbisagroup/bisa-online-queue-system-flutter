@@ -19,7 +19,7 @@ class NetworkApiService extends BaseApiServices {
     try {
       final response = await http
           .get(Uri.parse(url), headers: headers)
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 7));
       responseJson = returnResponse(response);
     } on SocketException {
       throw InternetException('');
@@ -39,7 +39,7 @@ class NetworkApiService extends BaseApiServices {
     try {
       final response = await http
           .post(Uri.parse(url), body: data, headers: headers)
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 15));
       responseJson = returnResponse(response);
     } on SocketException {
       throw InternetException('');

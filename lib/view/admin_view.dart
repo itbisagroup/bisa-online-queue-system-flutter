@@ -1,6 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:number_pagination/number_pagination.dart';
@@ -174,9 +173,9 @@ class AdminView extends GetView<AdminController> {
                                     minimumSize: const Size(100, 40),
                                   ),
                                 )
-                              : Row(
+                              : const Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
+                                  children: [
                                     SizedBox(
                                       width: 20,
                                       height: 20,
@@ -280,76 +279,93 @@ class AdminView extends GetView<AdminController> {
               : Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                      SizedBox(
-                        width: 70,
-                        child: DropdownButton<String>(
-                          focusColor: AppColors.grey,
-                          borderRadius: BorderRadius.circular(10),
-                          autofocus: true,
-                          hint: AppText(
-                            text: 'Status',
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'served',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.check,
-                                    color: AppColors.confirm,
+                      controller.isupdateStatusDisabled(controller
+                                  .pax[controller.pax.indexOf(tags)]
+                                  .pax!
+                                  .uuid!) ==
+                              false
+                          ? SizedBox(
+                              width: 70,
+                              child: DropdownButton<String>(
+                                focusColor: AppColors.grey,
+                                borderRadius: BorderRadius.circular(10),
+                                autofocus: true,
+                                hint: const AppText(
+                                  text: 'Status',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'served',
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.check,
+                                          color: AppColors.confirm,
+                                        ),
+                                        SizedBox(width: 5),
+                                        AppText(
+                                          text: 'Served',
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.confirm,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  SizedBox(width: 5),
-                                  AppText(
-                                    text: 'Served',
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.confirm,
+                                  DropdownMenuItem(
+                                    value: 'void',
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_add_disabled_outlined,
+                                          color: AppColors.maroon,
+                                        ),
+                                        SizedBox(width: 5),
+                                        AppText(
+                                          text: 'Void',
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.maroon,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ],
+                                onChanged: (String? newValue) {
+                                  controller.onItemSelected(
+                                      newValue,
+                                      controller
+                                          .pax[controller.pax.indexOf(tags)]
+                                          .queue!
+                                          .queueId!,
+                                      controller
+                                          .pax[controller.pax.indexOf(tags)]
+                                          .pax!
+                                          .uuid!);
+                                },
+                                style: const TextStyle(
+                                  fontSize: 14, // Ukuran font
+                                  color: Colors.black, // Warna teks
+                                ),
+                                isExpanded: true,
+                                iconSize: 24,
+                                iconEnabledColor: AppColors.maroon,
+                                underline: Container(
+                                  height: 2,
+                                  color: AppColors.maroon, // Warna underline
+                                ),
+                              ),
+                            )
+                          : const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: AppColors.grey,
+                                strokeWidth: 2,
                               ),
                             ),
-                            DropdownMenuItem(
-                              value: 'void',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.person_add_disabled_outlined,
-                                    color: AppColors.maroon,
-                                  ),
-                                  SizedBox(width: 5),
-                                  AppText(
-                                    text: 'Void',
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.maroon,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                          onChanged: (String? newValue) {
-                            controller.onItemSelected(
-                                newValue,
-                                controller.pax[controller.pax.indexOf(tags)]
-                                    .queue!.queueId!,
-                                controller.pax[controller.pax.indexOf(tags)]
-                                    .pax!.uuid!);
-                          },
-                          style: TextStyle(
-                            fontSize: 14, // Ukuran font
-                            color: Colors.black, // Warna teks
-                          ),
-                          isExpanded: true,
-                          iconSize: 24,
-                          iconEnabledColor: AppColors.maroon,
-                          underline: Container(
-                            height: 2,
-                            color: AppColors.maroon, // Warna underline
-                          ),
-                        ),
-                      ),
                       controller.isButtonAddDisabled(controller
                                   .pax[controller.pax.indexOf(tags)]
                                   .pax!
@@ -375,7 +391,7 @@ class AdminView extends GetView<AdminController> {
                                 ),
                               ),
                             )
-                          : SizedBox(
+                          : const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -481,7 +497,11 @@ class AdminView extends GetView<AdminController> {
             icon: const Icon(Icons.settings),
             onSelected: (String value) {
               if (value == '1') {
-                Get.toNamed(Routes.customer);
+                controller.custommerScreen();
+              }
+              if (value == '4') {
+                controller.setRealtime();
+                Get.offAllNamed(Routes.home);
               } else if (value == '2') {
                 Get.toNamed(Routes.printer);
               } else if (value == '3') {
@@ -489,6 +509,22 @@ class AdminView extends GetView<AdminController> {
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: '4',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh),
+                    Padding(
+                      padding: EdgeInsets.only(left: 6),
+                      child: AppText(
+                        text: 'Refresh',
+                        fontWeight: FontWeight.normal,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const PopupMenuItem<String>(
                 value: '1',
                 child: Row(
@@ -525,7 +561,7 @@ class AdminView extends GetView<AdminController> {
                 value: '3',
                 child: Row(
                   children: [
-                    Icon(Icons.refresh),
+                    Icon(Icons.restore_page),
                     Padding(
                       padding: EdgeInsets.only(left: 6),
                       child: AppText(
@@ -553,7 +589,7 @@ class AdminView extends GetView<AdminController> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               Padding(
-                padding: const EdgeInsets.only(right: 5.0),
+                padding: EdgeInsets.only(right: 5.0),
                 child: Icon(
                   Icons.paste,
                   color: AppColors.white,
@@ -581,364 +617,359 @@ class AdminView extends GetView<AdminController> {
                   return Stack(
                     children: [
                       FractionallySizedBox(
-                        heightFactor: 0.9,
-                        widthFactor: 1,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 30, right: 30),
-                                child: Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    SizedBox(
-                                      height: 20,
+                          heightFactor: 0.9,
+                          widthFactor: 1,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                height: 50,
+                              ),
+                              SizedBox(
+                                height: 35,
+                                width: double.infinity,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(
+                                      right: 30, left: 10),
+                                  child: TextField(
+                                    controller:
+                                        controller.textEditingController,
+                                    style: const TextStyle(
+                                      fontSize: 14,
                                     ),
-                                    SizedBox(
-                                      height: 35,
-                                      width: double.infinity,
-                                      child: TextField(
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                        ),
-                                        onChanged: (value) {
-                                          controller
-                                              .apiQueueDetailSearch(value);
-                                        },
-                                        decoration: const InputDecoration(
-                                          isCollapsed: true,
-                                          contentPadding: EdgeInsets.all(9),
-                                          isDense: true,
-                                          hintText: 'Search queue number',
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.all(
-                                                Radius.circular(20.0)),
-                                          ),
-                                          hintStyle: TextStyle(
-                                              fontSize: 15,
-                                              color: AppColors.black),
-                                          prefixIcon: Icon(Icons.search),
-                                        ),
+                                    onSubmitted: (value) {
+                                      controller.apiQueueDetailSearch(value);
+                                    },
+                                    decoration: const InputDecoration(
+                                      isCollapsed: true,
+                                      contentPadding: EdgeInsets.all(9),
+                                      isDense: true,
+                                      hintText: 'Search queue number',
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.all(
+                                            Radius.circular(20.0)),
                                       ),
+                                      hintStyle: TextStyle(
+                                        fontSize: 15,
+                                        color: AppColors.black,
+                                      ),
+                                      prefixIcon: Icon(Icons.search),
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            Expanded(
-                              flex: 13,
-                              child: Obx(
-                                () => controller.isLoading.value
-                                    ? const Center(
-                                        child: SizedBox(
+                              SizedBox(
+                                height: 10,
+                              ),
+                              Expanded(
+                                child: Obx(
+                                  () => controller.isLoading.value
+                                      ? const Center(
+                                          child: SizedBox(
                                             width: 40,
                                             height: 40,
-                                            child: CircularProgressIndicator()))
-                                    : controller.allQueue.isEmpty
-                                        ? const Center(
-                                            child: AppText(text: 'No data',fontSize: 12,))
-                                        : ListView.builder(
-                                            itemCount:
-                                                controller.allQueue.length,
-                                            itemBuilder: (context, index) {
-                                              final queue =
-                                                  controller.allQueue[index];
-                                              return Stack(
-                                                children: [
-                                                  Card(
-                                                    color: Color.fromARGB(
-                                                        255, 230, 230, 230),
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              bottom: 12,
-                                                              top: 12),
-                                                      child: Row(
-                                                        children: [
-                                                          Expanded(
-                                                            child: Column(
-                                                              mainAxisAlignment:
-                                                                  MainAxisAlignment
-                                                                      .center,
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .center,
-                                                              children: [
-                                                                AppText(
-                                                                  text: queue
-                                                                      .queueNumber,
-                                                                  fontSize: 24,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                ),
-                                                                SizedBox(
-                                                                    height: 3),
-                                                                Row(
-                                                                  mainAxisAlignment:
-                                                                      MainAxisAlignment
-                                                                          .center,
-                                                                  crossAxisAlignment:
-                                                                      CrossAxisAlignment
-                                                                          .center,
-                                                                  children: [
-                                                                    Icon(
-                                                                      controller.statusIcons(queue
-                                                                          .status
-                                                                          .value!),
-                                                                      size: 16,
-                                                                      color: controller.statusColors(queue
-                                                                          .status
-                                                                          .value!),
-                                                                    ),
-                                                                    SizedBox(
-                                                                        width:
-                                                                            5),
-                                                                    AppText(
-                                                                      text: queue
-                                                                          .status
-                                                                          .label!,
-                                                                      fontSize:
-                                                                          12,
-                                                                      color: controller.statusColors(queue
-                                                                          .status
-                                                                          .value!),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                          Expanded(
-                                                            flex: 3,
-                                                            child: Column(
-                                                              children: [
-                                                                Row(
-                                                                  children: [
-                                                                    Expanded(
-                                                                      child:
-                                                                          Column(
-                                                                        mainAxisAlignment:
-                                                                            MainAxisAlignment.start,
-                                                                        crossAxisAlignment:
-                                                                            CrossAxisAlignment.start,
-                                                                        children: [
-                                                                          AppText(
-                                                                            text:
-                                                                                'Call Count : ${queue.callCount}',
-                                                                            fontSize:
-                                                                                12,
-                                                                            fontWeight:
-                                                                                FontWeight.bold,
-                                                                          ),
-                                                                          AppText(
-                                                                            text:
-                                                                                controller.formatDynamicDate(queue.latestCall),
-                                                                            fontSize:
-                                                                                12,
-                                                                            fontWeight:
-                                                                                FontWeight.normal,
-                                                                          ),
-                                                                        ],
+                                            child: CircularProgressIndicator(),
+                                          ),
+                                        )
+                                      : controller.allQueue.isEmpty
+                                          ? const Center(
+                                              child: AppText(
+                                                text: 'No data',
+                                                fontSize: 16,
+                                              ),
+                                            )
+                                          : ListView.builder(
+                                              itemCount:
+                                                  controller.allQueue.length,
+                                              itemBuilder: (context, index) {
+                                                final queue =
+                                                    controller.allQueue[index];
+                                                return Stack(
+                                                  children: [
+                                                    Card(
+                                                      color:
+                                                          const Color.fromARGB(
+                                                              255,
+                                                              230,
+                                                              230,
+                                                              230),
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                                bottom: 12,
+                                                                top: 12),
+                                                        child: Row(
+                                                          children: [
+                                                            Expanded(
+                                                              child: Column(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .center,
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .center,
+                                                                children: [
+                                                                  AppText(
+                                                                    text: queue
+                                                                        .queueNumber,
+                                                                    fontSize:
+                                                                        24,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                  ),
+                                                                  const SizedBox(
+                                                                      height:
+                                                                          3),
+                                                                  Row(
+                                                                    mainAxisAlignment:
+                                                                        MainAxisAlignment
+                                                                            .center,
+                                                                    crossAxisAlignment:
+                                                                        CrossAxisAlignment
+                                                                            .center,
+                                                                    children: [
+                                                                      Icon(
+                                                                        controller.statusIcons(queue
+                                                                            .status
+                                                                            .value!),
+                                                                        size:
+                                                                            16,
+                                                                        color: controller.statusColors(queue
+                                                                            .status
+                                                                            .value!),
                                                                       ),
-                                                                    ),
-                                                                    Expanded(
-                                                                      child:
-                                                                          Column(
-                                                                        crossAxisAlignment:
-                                                                            CrossAxisAlignment.start,
-                                                                        children: [
-                                                                          AppText(
-                                                                            text:
-                                                                                'Created : ',
-                                                                            fontSize:
-                                                                                12,
-                                                                            fontWeight:
-                                                                                FontWeight.bold,
-                                                                          ),
-                                                                          AppText(
-                                                                            text:
-                                                                                controller.formatDate(queue.createdAt),
-                                                                            fontSize:
-                                                                                12,
-                                                                            fontWeight:
-                                                                                FontWeight.normal,
-                                                                          ),
-                                                                        ],
+                                                                      const SizedBox(
+                                                                          width:
+                                                                              5),
+                                                                      AppText(
+                                                                        text: queue
+                                                                            .status
+                                                                            .label!,
+                                                                        fontSize:
+                                                                            12,
+                                                                        color: controller.statusColors(queue
+                                                                            .status
+                                                                            .value!),
                                                                       ),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ],
+                                                                    ],
+                                                                  ),
+                                                                ],
+                                                              ),
                                                             ),
-                                                          )
-                                                        ],
+                                                            Expanded(
+                                                              flex: 3,
+                                                              child: Column(
+                                                                children: [
+                                                                  Row(
+                                                                    children: [
+                                                                      Expanded(
+                                                                        child:
+                                                                            Column(
+                                                                          mainAxisAlignment:
+                                                                              MainAxisAlignment.start,
+                                                                          crossAxisAlignment:
+                                                                              CrossAxisAlignment.start,
+                                                                          children: [
+                                                                            AppText(
+                                                                              text: 'Call Count : ${queue.callCount}',
+                                                                              fontSize: 12,
+                                                                              fontWeight: FontWeight.bold,
+                                                                            ),
+                                                                            AppText(
+                                                                              text: controller.formatDynamicDate(queue.latestCall),
+                                                                              fontSize: 12,
+                                                                              fontWeight: FontWeight.normal,
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        child:
+                                                                            Column(
+                                                                          crossAxisAlignment:
+                                                                              CrossAxisAlignment.start,
+                                                                          children: [
+                                                                            const AppText(
+                                                                              text: 'Created : ',
+                                                                              fontSize: 12,
+                                                                              fontWeight: FontWeight.bold,
+                                                                            ),
+                                                                            AppText(
+                                                                              text: controller.formatDate(queue.createdAt),
+                                                                              fontSize: 12,
+                                                                              fontWeight: FontWeight.normal,
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                  Visibility(
-                                                    visible:
-                                                        queue.status.value! <=
-                                                            3,
-                                                    child: Positioned(
-                                                      right: 1,
-                                                      top: 1,
-                                                      child: PopupMenuButton<
-                                                          String>(
-                                                        icon: const Icon(
-                                                          Icons.more_vert,
-                                                        ),
-                                                        onSelected:
-                                                            (String value) {
-                                                          if (value ==
-                                                              'print') {
-                                                            controller
-                                                                .printQueue(queue
-                                                                    .queueId
-                                                                    .toString());
-                                                          } else if (value ==
-                                                              'served') {
-                                                            controller
-                                                                .servedQueueDetail(
-                                                                    queue
-                                                                        .queueId);
-                                                          } else if (value ==
-                                                              'void') {
-                                                            controller
-                                                                .voidQueueDetail(
-                                                                    queue
-                                                                        .queueId);
-                                                          }
-                                                        },
-                                                        itemBuilder:
-                                                            (BuildContext
-                                                                    context) =>
-                                                                <PopupMenuEntry<
-                                                                    String>>[
-                                                          const PopupMenuItem<
-                                                              String>(
-                                                            value: 'print',
-                                                            child: Row(
-                                                              children: [
-                                                                Icon(Icons
-                                                                    .print_rounded),
-                                                                Padding(
-                                                                  padding: EdgeInsets
-                                                                      .only(
-                                                                          left:
-                                                                              6),
-                                                                  child:
-                                                                      AppText(
-                                                                    text:
-                                                                        'Reprint',
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .normal,
-                                                                    fontSize:
-                                                                        12,
+                                                    Visibility(
+                                                      visible:
+                                                          queue.status.value! <=
+                                                              3,
+                                                      child: Positioned(
+                                                        right: 1,
+                                                        top: 1,
+                                                        child: PopupMenuButton<
+                                                            String>(
+                                                          icon: const Icon(
+                                                              Icons.more_vert),
+                                                          onSelected:
+                                                              (String value) {
+                                                            if (value ==
+                                                                'print') {
+                                                              controller
+                                                                  .printQueue(queue
+                                                                      .queueId
+                                                                      .toString());
+                                                            } else if (value ==
+                                                                'served') {
+                                                              controller
+                                                                  .servedQueueDetail(
+                                                                      queue
+                                                                          .queueId);
+                                                            } else if (value ==
+                                                                'void') {
+                                                              controller
+                                                                  .voidQueueDetail(
+                                                                      queue
+                                                                          .queueId);
+                                                            }
+                                                          },
+                                                          itemBuilder:
+                                                              (BuildContext
+                                                                      context) =>
+                                                                  <PopupMenuEntry<
+                                                                      String>>[
+                                                            const PopupMenuItem<
+                                                                String>(
+                                                              value: 'print',
+                                                              child: Row(
+                                                                children: [
+                                                                  Icon(Icons
+                                                                      .print_rounded),
+                                                                  Padding(
+                                                                    padding: EdgeInsets
+                                                                        .only(
+                                                                            left:
+                                                                                6),
+                                                                    child:
+                                                                        AppText(
+                                                                      text:
+                                                                          'Reprint',
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .normal,
+                                                                      fontSize:
+                                                                          12,
+                                                                    ),
                                                                   ),
-                                                                ),
-                                                              ],
+                                                                ],
+                                                              ),
                                                             ),
-                                                          ),
-                                                          const PopupMenuItem<
-                                                              String>(
-                                                            value: 'served',
-                                                            child: Row(
-                                                              children: [
-                                                                Icon(
-                                                                  Icons
-                                                                      .check_circle_rounded,
-                                                                  color: AppColors
-                                                                      .confirm,
-                                                                ),
-                                                                Padding(
-                                                                  padding: EdgeInsets
-                                                                      .only(
-                                                                          left:
-                                                                              6),
-                                                                  child:
-                                                                      AppText(
-                                                                    text:
-                                                                        'Served',
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .normal,
-                                                                    fontSize:
-                                                                        12,
+                                                            const PopupMenuItem<
+                                                                String>(
+                                                              value: 'served',
+                                                              child: Row(
+                                                                children: [
+                                                                  Icon(
+                                                                    Icons
+                                                                        .check_circle_rounded,
                                                                     color: AppColors
                                                                         .confirm,
                                                                   ),
-                                                                ),
-                                                              ],
+                                                                  Padding(
+                                                                    padding: EdgeInsets
+                                                                        .only(
+                                                                            left:
+                                                                                6),
+                                                                    child:
+                                                                        AppText(
+                                                                      text:
+                                                                          'Served',
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .normal,
+                                                                      fontSize:
+                                                                          12,
+                                                                      color: AppColors
+                                                                          .confirm,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
                                                             ),
-                                                          ),
-                                                          const PopupMenuItem<
-                                                              String>(
-                                                            value: 'void',
-                                                            child: Row(
-                                                              children: [
-                                                                Icon(
-                                                                  Icons
-                                                                      .person_add_disabled_outlined,
-                                                                  color:
-                                                                      AppColors
-                                                                          .red,
-                                                                ),
-                                                                Padding(
-                                                                  padding: EdgeInsets
-                                                                      .only(
-                                                                          left:
-                                                                              6),
-                                                                  child:
-                                                                      AppText(
-                                                                    text:
-                                                                        'Void',
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .normal,
-                                                                    fontSize:
-                                                                        12,
+                                                            const PopupMenuItem<
+                                                                String>(
+                                                              value: 'void',
+                                                              child: Row(
+                                                                children: [
+                                                                  Icon(
+                                                                    Icons
+                                                                        .person_add_disabled_outlined,
                                                                     color:
                                                                         AppColors
                                                                             .red,
                                                                   ),
-                                                                ),
-                                                              ],
+                                                                  Padding(
+                                                                    padding: EdgeInsets
+                                                                        .only(
+                                                                            left:
+                                                                                6),
+                                                                    child:
+                                                                        AppText(
+                                                                      text:
+                                                                          'Void',
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .normal,
+                                                                      fontSize:
+                                                                          12,
+                                                                      color: AppColors
+                                                                          .red,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
                                                             ),
-                                                          ),
-                                                        ],
+                                                          ],
+                                                        ),
                                                       ),
                                                     ),
-                                                  )
-                                                ],
-                                              );
-                                            },
-                                          ),
+                                                  ],
+                                                );
+                                              },
+                                            ),
+                                ),
                               ),
-                            ),
-                            Expanded(
-                              flex: 1,
-                              child: NumberPagination(
-                                onPageChanged: (int pageNumber) {
-                                  controller.selectedPageNumber.value =
-                                      pageNumber;
-                                  controller.apiQueueDetailList(pageNumber);
-                                },
-                                threshold: 15,
-                                pageTotal: controller.pageTotal.value,
-                                pageInit: controller.selectedPageNumber.value,
-                                colorPrimary: AppColors.black,
-                                colorSub: Colors.white,
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: NumberPagination(
+                                  onPageChanged: (int pageNumber) {
+                                    controller.selectedPageNumber.value =
+                                        pageNumber;
+                                    controller.apiQueueDetailList(pageNumber);
+                                  },
+                                  threshold: 15,
+                                  pageTotal: controller.pageTotal.value,
+                                  pageInit: controller.selectedPageNumber.value,
+                                  colorPrimary: AppColors.black,
+                                  colorSub: Colors.white,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
+                            ],
+                          )),
                       Positioned(
                         right: 10,
                         top: 1,
@@ -953,7 +984,7 @@ class AdminView extends GetView<AdminController> {
                           },
                         ),
                       ),
-                      Positioned(
+                      const Positioned(
                           left: 20,
                           top: 10,
                           child: AppText(

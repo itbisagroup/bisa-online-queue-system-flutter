@@ -1,4 +1,3 @@
-
 import 'package:get/get.dart';
 import 'package:queue_system/routes/middleware/key_avaliable.dart';
 import 'package:queue_system/routes/middleware/key_notavaliable.dart';
@@ -6,7 +5,7 @@ import 'package:queue_system/view/admin_view.dart';
 import 'package:queue_system/view/auth_view.dart';
 import 'package:queue_system/view/customer_view.dart';
 import 'package:queue_system/view/setting_printer.dart';
-
+import 'package:queue_system/view/void_view.dart';
 
 part 'app_routes.dart';
 
@@ -23,22 +22,28 @@ class AppPages {
       transition: Transition.noTransition,
     ),
     GetPage(
-      name: Routes.customer,
-      middlewares: [KeyNotAvaliable()],
-      page: () => const CustomerView(),
-      transition: Transition.topLevel,
-    ),
+        name: Routes.customer,
+        middlewares: [KeyNotAvaliable()],
+        page: () => const CustomerView(),
+        transition: Transition.fadeIn,
+        transitionDuration: Duration(seconds: 3)),
     GetPage(
       name: Routes.auth,
       middlewares: [KeyAvaliable()],
-      page: () =>  const AuthView(),
+      page: () => const AuthView(),
       transition: Transition.noTransition,
     ),
     GetPage(
       name: Routes.printer,
       middlewares: [KeyNotAvaliable()],
-      page: () =>  const PrinterSettingView(),
+      page: () => const PrinterSettingView(),
       transition: Transition.noTransition,
     ),
+    GetPage(
+        name: Routes.voidScreen,
+        middlewares: [KeyNotAvaliable()],
+        page: () => const VoidView(),
+        transition: Transition.fadeIn,
+        transitionDuration: Duration(seconds: 3)),
   ];
 }

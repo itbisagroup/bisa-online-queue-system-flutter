@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/widgets.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -14,12 +14,16 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:queue_system/data/network/base_api_services.dart';
 import 'package:queue_system/data/response/status.dart';
 import 'package:queue_system/models/queue.dart';
 import 'package:queue_system/models/queue_item.dart';
 import 'package:queue_system/routes/app_pages.dart';
 import 'package:queue_system/utils/constan.dart';
+import 'package:queue_system/utils/secure_storage.dart';
 import 'package:queue_system/widget/app_dialog.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 
 import '../../repository/home_repository.dart';
 
@@ -30,14 +34,18 @@ class AdminController extends GetxController {
   final ads = <Ads>[].obs;
   final queues = <Queue>[].obs;
   final allQueue = <QueueList>[];
-  final Map<String, RxBool> buttonStatus = {};
+  final Map<String, RxBool> buttonCall = {};
   final Map<String, RxBool> buttonAdd = {};
-
+  final Map<String, RxBool> updateStatus = {};
   RxString error = ''.obs;
   final rxRequestStatus = Status.LOADING.obs;
+  final TextEditingController textEditingController = TextEditingController();
   var currentDate = ''.obs;
   var currentTime = ''.obs;
   var isLoading = false.obs;
+  var statusRealtime = false.obs;
+  late final player = Player();
+  late final controllerVideo = VideoController(player);
   var color = Colors.black.obs;
   var isMenuOpen = false.obs;
   final FlutterTts flutterTts = FlutterTts();
@@ -49,30 +57,80 @@ class AdminController extends GetxController {
   @override
   Future<void> onInit() async {
     super.onInit();
-    startApiCall();
-    apiQueueDetailList(selectedPageNumber.value);
+    queueListApi();
   }
 
   void setRxRequestStatus(Status _value) => rxRequestStatus.value = _value;
   void setError(String _value) => error.value = _value;
 
+  Future<void> realtimeApi() async {
+    final myChannel = Supabase.instance.client.channel('my_channel');
+
+    myChannel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'status',
+          filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'id_branch',
+              value: branch.value.id!),
+          callback: (PostgresChangePayload payload) async {
+            final Map<String, dynamic> newRecord = payload.newRecord;
+            final bool isActive = newRecord['isActive'];
+            if (isActive) {
+              statusRealtime.value = true;
+              Timer(Duration(seconds: 60), () async {
+                statusRealtime.value = false;
+              });
+              await player.setVolume(20.0);
+              Timer(Duration(seconds: 8), () async {
+                await player.setVolume(100.0);
+              });
+              updateQueueListApi();
+            } else {
+              statusRealtime.value = true;
+              Timer(Duration(seconds: 60), () async {
+                statusRealtime.value = false;
+              });
+              updateQueueListApi();
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  Future<void> setRealtime() async {
+    // Set isActive to true
+    await Supabase.instance.client
+        .from('status')
+        .update({'isActive': true}).eq('id_branch', branch.value.id!);
+  }
+
+  Future<void> setRealtimeSoundVideo() async {
+    // Set isActive to true
+    await Supabase.instance.client
+        .from('status')
+        .update({'isActive': false}).eq('id_branch', branch.value.id!);
+  }
+
   bool isButtonDisabled(String uuid) {
-    if (!buttonStatus.containsKey(uuid)) {
-      buttonStatus[uuid] = false.obs;
+    if (!buttonCall.containsKey(uuid)) {
+      buttonCall[uuid] = false.obs;
     }
-    return buttonStatus[uuid]!.value;
+    return buttonCall[uuid]!.value;
   }
 
   void disableButton(String uuid) {
-    if (!buttonStatus.containsKey(uuid)) {
-      buttonStatus[uuid] = false.obs;
+    if (!buttonCall.containsKey(uuid)) {
+      buttonCall[uuid] = false.obs;
     }
-    buttonStatus[uuid]!.value = true;
+    buttonCall[uuid]!.value = true;
   }
 
   void enableButton(String uuid) {
-    if (buttonStatus.containsKey(uuid)) {
-      buttonStatus[uuid]!.value = false;
+    if (buttonCall.containsKey(uuid)) {
+      buttonCall[uuid]!.value = false;
     }
   }
 
@@ -96,21 +154,34 @@ class AdminController extends GetxController {
     }
   }
 
-  void startApiCall() {
-    queueListApi();
-    Timer.periodic(Duration(hours: 60), (Timer timer) {
-      updateQueueListApi();
-    });
+  bool isupdateStatusDisabled(String uuid) {
+    if (!updateStatus.containsKey(uuid)) {
+      updateStatus[uuid] = false.obs;
+    }
+    return updateStatus[uuid]!.value;
   }
 
-  void queueListApi() {
-    _api.getDetailQueue().then((value) {
+  void disableUpdateStatus(String uuid) {
+    if (!updateStatus.containsKey(uuid)) {
+      updateStatus[uuid] = false.obs;
+    }
+    updateStatus[uuid]!.value = true;
+  }
+
+  void enableUpdateStatus(String uuid) {
+    if (updateStatus.containsKey(uuid)) {
+      updateStatus[uuid]!.value = false;
+    }
+  }
+
+  void queueListApi() async {
+    _api.getDetailQueue().then((value) async {
       branch.refresh();
       pax.clear();
       ads.clear();
       queues.clear();
       branch.value = Branch.fromJson(value);
-
+      await realtimeApi();
       // Periksa jika data 'pax' tidak null
       if (value['data']['pax'] != null) {
         final List<dynamic> listPax = value['data']['pax'];
@@ -159,7 +230,6 @@ class AdminController extends GetxController {
           return PaxWithQueue(pax: paxData, queue: queue);
         }).toList());
       }
-
       final List<dynamic> listAds = value['data']['ads'];
       ads.addAll(listAds.map((json) => Ads.fromJson(json)).toList());
 
@@ -169,6 +239,8 @@ class AdminController extends GetxController {
       }
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) {
+      setRxRequestStatus(Status.ERROR);
+
       setError(error.toString());
       print(error);
     });
@@ -258,6 +330,55 @@ class AdminController extends GetxController {
     return formatter.format(dateTime);
   }
 
+  Future<void> custommerScreen() async {
+    await downloadAds().then((value) {
+      Get.toNamed(Routes.customer);
+    }).onError((error, stackTrace) {
+      AppDialog.showToastError(msg: 'Failed to download ads! $error');
+      print(error);
+    });
+  }
+
+  Future<void> downloadAds() async {
+    try {
+      AppDialog.showDialogLoading();
+      final String? key = await SecureStorage().getKey();
+      for (var ad in ads) {
+        var videoDirectory = await getApplicationDocumentsDirectory();
+        var path = "${videoDirectory.path}/assets/videos/";
+        var filePathAndName = '$path/${ad.content}';
+        File video = File(filePathAndName);
+
+        // Check if the file already exists
+        if (await video.exists()) {
+          print('File already exists: ${ad.uuid}');
+          continue;
+        }
+
+        final url =
+            Uri.parse('${BaseApiServices.adsEndpoint}/${ad.uuid}/download');
+        Map<String, String> requestExtraHeaders = {'Queue': key!};
+        final response = await http
+            .get(url, headers: requestExtraHeaders)
+            .timeout(Duration(minutes: 1));
+        if (response.statusCode == 200) {
+          await Directory(path).create(recursive: true);
+          await video.writeAsBytes(response.bodyBytes);
+          print('Successfully downloaded ${ad.uuid}');
+        } else {
+          AppDialog.showToastError(msg: response.statusCode.toString());
+          print('Failed to download ad with UUID: ${ad.uuid}');
+        }
+      }
+    } catch (e) {
+      Get.back();
+      AppDialog.showToastError(msg: 'Failed to download ads!: $e');
+      print(e.toString());
+    } finally {
+      Get.back();
+    }
+  }
+
   Future<void> clearDirectory() async {
     try {
       final documentDirectory = await getApplicationDocumentsDirectory();
@@ -290,14 +411,15 @@ class AdminController extends GetxController {
     _api.addNewQueue(paxId).then((value) async {
       final queueId = value['data']['queueId'];
       printQueue(queueId.toString());
-      updateQueueListApi();
-      apiQueueDetailList(selectedPageNumber.value);
       AppDialog.showToastSuccess(msg: value['description']);
       enableAddButton(paxId);
+
       setRxRequestStatus(Status.COMPLETED);
-    }).onError((error, stackTrace) {
+      await setRealtimeSoundVideo();
+    }).onError((error, stackTrace) async {
       setError(error.toString());
       enableAddButton(paxId);
+      await setRealtime();
       AppDialog.showToastError(msg: 'Unable to add Queue! $error');
       print(error);
     });
@@ -309,38 +431,45 @@ class AdminController extends GetxController {
       final cancelCode = value['data']['cancelCode'];
       final qrData = value['data']['qrCode'];
       await printQr(number, cancelCode, qrData);
+
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) {
       setError(error.toString());
-      AppDialog.showToastError(msg: 'Unable to print Queue! $error');
+      AppDialog.showToastError(msg: 'Unable to print! Please print again.');
       print(error);
     });
   }
 
   void servedQueue(int queueId, String paxId) {
+    disableUpdateStatus(paxId);
     _api.addStatusQueue(queueId, '4').then((value) async {
       final number = value['data']['queueNumber'];
       print('Served Queue Number: $number');
-      updateQueueListApi();
+      await setRealtime();
       enableButton(paxId);
+      enableUpdateStatus(paxId);
       AppDialog.showToastSuccess(msg: value['description']);
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) {
       setError(error.toString());
+      enableUpdateStatus(paxId);
       AppDialog.showToastError(msg: 'Unable to update status served! $error');
       print(error);
     });
   }
 
   void voidQueue(int queueId, String paxId) {
+    disableUpdateStatus(paxId);
     _api.addStatusQueue(queueId, '7').then((value) async {
       final number = value['data']['queueNumber'];
       print('void Queue Number: $number');
-      updateQueueListApi();
+      await setRealtime();
       enableButton(paxId);
+      enableUpdateStatus(paxId);
       AppDialog.showToastSuccess(msg: value['description']);
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) {
+      enableUpdateStatus(paxId);
       setError(error.toString());
       AppDialog.showToastError(
           msg: 'Unable to update status void Queue! $error');
@@ -352,7 +481,7 @@ class AdminController extends GetxController {
     _api.addStatusQueue(queueId, '4').then((value) async {
       final number = value['data']['queueNumber'];
       print('Served Queue Number: $number');
-      updateQueueListApi();
+      await setRealtime();
       apiQueueDetailList(selectedPageNumber.value);
       AppDialog.showToastSuccess(msg: value['description']);
       setRxRequestStatus(Status.COMPLETED);
@@ -367,7 +496,7 @@ class AdminController extends GetxController {
     _api.addStatusQueue(queueId, '7').then((value) async {
       final number = value['data']['queueNumber'];
       print('void Queue Number: $number');
-      updateQueueListApi();
+      await setRealtime();
       apiQueueDetailList(selectedPageNumber.value);
       AppDialog.showToastSuccess(msg: value['description']);
       setRxRequestStatus(Status.COMPLETED);
@@ -382,11 +511,10 @@ class AdminController extends GetxController {
   void callQueue(String paxId, int queueCount) {
     disableButton(paxId);
     _api.callQueue(paxId).then((value) async {
-      setRxRequestStatus(Status.LOADING);
       final number = value['data']['queueNumber'];
       final numberCall = formatQueueNumber(number);
       callSpeakFunction(numberCall, queueCount);
-      updateQueueListApi();
+      await setRealtime();
       disableButton(paxId);
       Timer(Duration(seconds: branch.value.callDelay!), () {
         enableButton(paxId);
@@ -406,7 +534,7 @@ class AdminController extends GetxController {
     AppDialog.showDialogLoading();
     _api.reset().then((value) async {
       AppDialog.showToastSuccess(msg: 'Queue reset successfully.');
-      updateQueueListApi();
+      await setRealtime();
 
       Get.offAllNamed(Routes.home);
     }).onError((error, stackTrace) {
@@ -431,6 +559,7 @@ class AdminController extends GetxController {
       await flutterTts.setLanguage('en-US');
     }
     await flutterTts.setPitch(1.0);
+    await flutterTts.setVolume(100);
     await flutterTts.setSpeechRate(0.5);
     final audio = AudioPlayer();
     await audio.play(AssetSource('sounds/attention.mp3'));
@@ -493,12 +622,18 @@ class AdminController extends GetxController {
                   branch.value.fullName!,
                   style: pw.TextStyle(
                     font: font,
-                    fontSize: 20,
+                    fontSize: 16,
                     fontWeight: pw.FontWeight.bold,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 10),
+                pw.SizedBox(height: 15),
+                pw.Image(
+                  pw.MemoryImage(qrCodeBytes!.buffer.asUint8List()),
+                  width: 100,
+                  height: 100,
+                ),
+                pw.SizedBox(height: 5),
                 pw.Text(
                   ' A001',
                   style: pw.TextStyle(
@@ -508,34 +643,50 @@ class AdminController extends GetxController {
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 10),
-                pw.Image(
-                  pw.MemoryImage(qrCodeBytes!.buffer.asUint8List()),
-                  width: 100,
-                  height: 100,
-                ),
-                pw.SizedBox(height: 10),
+                pw.SizedBox(height: 5),
                 pw.Text(
                   'Scan the QR code above to check your queue status.',
-                  style: pw.TextStyle(
+                  style: const pw.TextStyle(
                     fontSize: 12,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'Cancellation Code: AAAA11',
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
+                pw.SizedBox(height: 5),
+                pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'Cancellation Code: ',
+                        style: const pw.TextStyle(
+                          fontSize: 12,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                      pw.Text(
+                        'AAAA11',
+                        style: pw.TextStyle(
+                          font: font,
+                          fontSize: 12,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ]),
                 pw.SizedBox(height: 10),
                 pw.Text(
                   'Thank you for visiting!',
                   style: pw.TextStyle(
-                    font: font,
-                    fontSize: 14,
+                    fontSize: 10,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 15),
+                pw.Text(
+                  '*This alpha-version is not complete and may or may not change further',
+                  style: pw.TextStyle(
+                    fontSize: 8,
+                    fontStyle: pw.FontStyle.italic,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
@@ -578,20 +729,20 @@ class AdminController extends GetxController {
                   branch.value.fullName!,
                   style: pw.TextStyle(
                     font: font,
-                    fontSize: 20,
+                    fontSize: 16,
                     fontWeight: pw.FontWeight.bold,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 16),
+                pw.SizedBox(height: 15),
                 pw.Image(
                   pw.MemoryImage(qrCodeBytes!.buffer.asUint8List()),
                   width: 100,
                   height: 100,
                 ),
-                pw.SizedBox(height: 16),
+                pw.SizedBox(height: 5),
                 pw.Text(
-                  ' $queueNumber',
+                  queueNumber,
                   style: pw.TextStyle(
                     font: font,
                     fontSize: 16,
@@ -599,37 +750,50 @@ class AdminController extends GetxController {
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 10),
+                pw.SizedBox(height: 5),
                 pw.Text(
                   'Scan the QR code above to check your queue status.',
-                  style: pw.TextStyle(
+                  style: const pw.TextStyle(
                     fontSize: 12,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'Cancellation Code: $cancelCode',
-                  style: pw.TextStyle(
-                    fontSize: 12,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
+                pw.SizedBox(height: 5),
+                pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        'Cancellation Code: ',
+                        style: const pw.TextStyle(
+                          fontSize: 12,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                      pw.Text(
+                        cancelCode,
+                        style: pw.TextStyle(
+                          font: font,
+                          fontSize: 12,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ]),
                 pw.SizedBox(height: 10),
                 pw.Text(
                   'Thank you for visiting!',
                   style: pw.TextStyle(
-                    font: font,
-                    fontSize: 14,
+                    fontSize: 10,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 20),
+                pw.SizedBox(height: 15),
                 pw.Text(
-                  'This alpha-version is not complete and may or may not change further',
+                  '*This alpha-version is not complete and may or may not change further',
                   style: pw.TextStyle(
-                    font: font,
-                    fontSize: 10,
+                    fontSize: 8,
+                    fontStyle: pw.FontStyle.italic,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),

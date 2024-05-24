@@ -128,7 +128,7 @@ class AppDialog {
 
     fToast.showToast(
       gravity: ToastGravity.BOTTOM,
-      toastDuration: const Duration(seconds: 2),
+      toastDuration: const Duration(seconds: 5),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -152,7 +152,7 @@ class AppDialog {
 
     fToast.showToast(
       gravity: ToastGravity.BOTTOM,
-      toastDuration: const Duration(seconds: 2),
+      toastDuration: const Duration(seconds: 5),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
