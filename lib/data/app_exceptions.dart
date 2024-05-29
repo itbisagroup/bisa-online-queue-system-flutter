@@ -23,6 +23,7 @@ class InvalidUrlException extends AppExceptions{
   InvalidUrlException([String? message]) :super(message,'');
 }
 class UnautorizedException extends AppExceptions{
+  
   UnautorizedException([String? message]) :super(message,'Unautorized');
 }
 class FetchDataException extends AppExceptions{

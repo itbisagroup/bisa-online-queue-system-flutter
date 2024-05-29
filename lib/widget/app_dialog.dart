@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
@@ -60,7 +58,7 @@ class AppDialog {
                             width: 200,
                             height: 50,
                             child: TextButton(
-                              onPressed:func ,
+                              onPressed: func,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -84,11 +82,12 @@ class AppDialog {
                     ),
                   ),
                   Positioned(
-                    right: 5,
-                    top: 1,
+                      right: 5,
+                      top: 1,
                       child: IconButton(
                           onPressed: Get.back,
-                          icon: const Icon(Icons.close, color: AppColors.grey))),
+                          icon:
+                              const Icon(Icons.close, color: AppColors.grey))),
                 ],
               ),
             ),
@@ -122,6 +121,7 @@ class AppDialog {
       ),
     );
   }
+
   static showToastError({required String msg}) {
     var fToast = FToast();
     fToast.init(Get.overlayContext!);
@@ -132,7 +132,7 @@ class AppDialog {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color:  AppColors.maroon,
+          color: AppColors.maroon,
           borderRadius: BorderRadius.circular(5),
         ),
         child: AppText(
@@ -156,7 +156,7 @@ class AppDialog {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color:  AppColors.blackCalm,
+          color: AppColors.blackCalm,
           borderRadius: BorderRadius.circular(5),
         ),
         child: AppText(
@@ -170,4 +170,105 @@ class AppDialog {
     );
   }
 
+  static void confirmationMsg({
+    required String title,
+    required String message,
+    required function,
+    required String aksiText,
+  }) async {
+    await Get.dialog(
+      Scaffold(
+        backgroundColor: Colors.transparent,
+        body: PopScope(
+          canPop: false,
+          child: Center(
+            child: SizedBox(
+              width: 450,
+              child: Card(
+                margin: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppText(
+                                      text: title,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.maroon,
+                                      overflow: TextOverflow.ellipsis),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 24),
+                            AppText(
+                              text: message,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.black,
+                              maxLines: 2,
+                            ),
+                            const SizedBox(height: 24),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                SizedBox(
+                                  height: 35,
+                                  child: MaterialButton(
+                                    onPressed: () => Get.back(),
+                                    color: AppColors.red,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 24),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(5)),
+                                    child: const AppText(
+                                        text: "Cancel",
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.white),
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                SizedBox(
+                                  height: 35,
+                                  child: MaterialButton(
+                                    onPressed: function,
+                                    color: AppColors.confirm,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 24),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(5)),
+                                    child: AppText(
+                                        text: aksiText,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.white),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
 }

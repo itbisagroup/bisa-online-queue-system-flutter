@@ -49,7 +49,8 @@ dependencies:
   printing: ^5.12.0
   qr_flutter: ^4.1.0
   number_pagination: ^1.0.6
-  supabase_flutter: ^2.5.3
+  desktop_multi_window: ^0.2.0
+  animated_text_kit: ^4.2.2
   
 dev_dependencies:
   flutter_lints: ^2.0.0

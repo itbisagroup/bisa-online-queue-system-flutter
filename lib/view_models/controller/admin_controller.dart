@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:pdf/pdf.dart';
@@ -22,7 +24,6 @@ import 'package:queue_system/routes/app_pages.dart';
 import 'package:queue_system/utils/constan.dart';
 import 'package:queue_system/utils/secure_storage.dart';
 import 'package:queue_system/widget/app_dialog.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 
 import '../../repository/home_repository.dart';
@@ -43,6 +44,7 @@ class AdminController extends GetxController {
   var currentDate = ''.obs;
   var currentTime = ''.obs;
   var isLoading = false.obs;
+  var buttonRefreshDetail = false.obs;
   var statusRealtime = false.obs;
   late final player = Player();
   late final controllerVideo = VideoController(player);
@@ -53,6 +55,7 @@ class AdminController extends GetxController {
   var selectedPageNumber = 1.obs;
   var pageTotal = 1.obs;
   var loading = false.obs;
+  final List<int> secondaryWindowIDs = [];
 
   @override
   Future<void> onInit() async {
@@ -63,55 +66,85 @@ class AdminController extends GetxController {
   void setRxRequestStatus(Status _value) => rxRequestStatus.value = _value;
   void setError(String _value) => error.value = _value;
 
-  Future<void> realtimeApi() async {
-    final myChannel = Supabase.instance.client.channel('my_channel');
+  void openSecondaryWindow() async {
+    await downloadAds().then((value) {
+      Get.toNamed(Routes.customer);
+    }).onError((error, stackTrace) {
+      DesktopMultiWindow.createWindow(jsonEncode({'args1': 'Sub window'}))
+          .then((value) {
+        secondaryWindowIDs.add(value.windowId);
 
-    myChannel
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'status',
-          filter: PostgresChangeFilter(
-              type: PostgresChangeFilterType.eq,
-              column: 'id_branch',
-              value: branch.value.id!),
-          callback: (PostgresChangePayload payload) async {
-            final Map<String, dynamic> newRecord = payload.newRecord;
-            final bool isActive = newRecord['isActive'];
-            if (isActive) {
-              statusRealtime.value = true;
-              Timer(Duration(seconds: 60), () async {
-                statusRealtime.value = false;
-              });
-              await player.setVolume(20.0);
-              Timer(Duration(seconds: 8), () async {
-                await player.setVolume(100.0);
-              });
-              updateQueueListApi();
-            } else {
-              statusRealtime.value = true;
-              Timer(Duration(seconds: 60), () async {
-                statusRealtime.value = false;
-              });
-              updateQueueListApi();
-            }
-          },
-        )
-        .subscribe();
+        value
+          ..setFrame(const Offset(0, 0) & const Size(1280, 720))
+          ..center()
+          ..setTitle("")
+          ..show();
+      });
+      Timer(Duration(seconds: 2), () {
+        updateQueueSecondaryWindows();
+        updateDataSecondaryWindows();
+      });
+    });
   }
 
-  Future<void> setRealtime() async {
-    // Set isActive to true
-    await Supabase.instance.client
-        .from('status')
-        .update({'isActive': true}).eq('id_branch', branch.value.id!);
+  List<String?> getAllQueueNumbers() {
+    return pax.map((paxWithQueue) => paxWithQueue.queue?.queueNumber).toList();
   }
 
-  Future<void> setRealtimeSoundVideo() async {
-    // Set isActive to true
-    await Supabase.instance.client
-        .from('status')
-        .update({'isActive': false}).eq('id_branch', branch.value.id!);
+  List<String?> getAllAdsNumbers() {
+    return ads.map((ad) => ad.content).toList();
+  }
+
+  void updateQueueSecondaryWindows() {
+    // Get all queue numbers
+    List<String?> queueNumbers = getAllQueueNumbers();
+    String jsonDataList = jsonEncode(queueNumbers);
+
+    for (var windowID in secondaryWindowIDs) {
+      DesktopMultiWindow.invokeMethod(windowID, "updateQueue", jsonDataList);
+    }
+  }
+
+  void onUpdate() {
+    String jsonDataList = jsonEncode(true);
+
+    for (var windowID in secondaryWindowIDs) {
+      DesktopMultiWindow.invokeMethod(windowID, "updateScreen", jsonDataList);
+    }
+  }
+
+  void callSecondaryWindows(String number, int queueCount) {
+    // Get all queue numbers
+    String numberCall = jsonEncode(number);
+    String callCount = jsonEncode(queueCount);
+
+    for (var windowID in secondaryWindowIDs) {
+      DesktopMultiWindow.invokeMethod(windowID, "callCount", callCount);
+      DesktopMultiWindow.invokeMethod(windowID, "callQueue", numberCall);
+    }
+  }
+
+  void updateDataSecondaryWindows() {
+    // Get all queue numbers
+    List<String?> ads = getAllAdsNumbers();
+    String jsonAdsList = jsonEncode(ads);
+    String fullName = jsonEncode(branch.value.fullName);
+    String logo = jsonEncode(branch.value.brand!.logo);
+    String playAds = jsonEncode(branch.value.playAds);
+    String maxCall = jsonEncode(branch.value.callCount);
+    String address = jsonEncode(branch.value.address);
+    String city = jsonEncode(branch.value.city);
+    String province = jsonEncode(branch.value.province);
+    for (var windowID in secondaryWindowIDs) {
+      DesktopMultiWindow.invokeMethod(windowID, "updateAds", jsonAdsList);
+      DesktopMultiWindow.invokeMethod(windowID, "updateFullname", fullName);
+      DesktopMultiWindow.invokeMethod(windowID, "updateLogo", logo);
+      DesktopMultiWindow.invokeMethod(windowID, "updatePlayAds", playAds);
+      DesktopMultiWindow.invokeMethod(windowID, "maxCallQueue", maxCall);
+      DesktopMultiWindow.invokeMethod(windowID, "address", address);
+      DesktopMultiWindow.invokeMethod(windowID, "city", city);
+      DesktopMultiWindow.invokeMethod(windowID, "province", province);
+    }
   }
 
   bool isButtonDisabled(String uuid) {
@@ -181,7 +214,7 @@ class AdminController extends GetxController {
       ads.clear();
       queues.clear();
       branch.value = Branch.fromJson(value);
-      await realtimeApi();
+
       // Periksa jika data 'pax' tidak null
       if (value['data']['pax'] != null) {
         final List<dynamic> listPax = value['data']['pax'];
@@ -211,6 +244,7 @@ class AdminController extends GetxController {
   }
 
   void updateQueueListApi() {
+    AppDialog.showDialogLoading();
     _api.getDetailQueue().then((value) {
       branch.refresh();
       pax.clear();
@@ -237,11 +271,12 @@ class AdminController extends GetxController {
       if (listQueue != null) {
         queues.addAll(listQueue.map((json) => Queue.fromJson(json)).toList());
       }
+      Get.back();
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) {
       setRxRequestStatus(Status.ERROR);
-
       setError(error.toString());
+      Get.back();
       print(error);
     });
   }
@@ -255,9 +290,14 @@ class AdminController extends GetxController {
         allQueue.add(QueueList.fromJson(item));
       }
       pageTotal.value = value['data']['pages']['totalPages'];
+      buttonRefreshDetail.value = false;
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) {
       isLoading(false);
+      if (error.toString() =='Request Time Out') {
+        buttonRefreshDetail.value = true;
+        allQueue.clear();
+      }
       setError(error.toString());
       print(error.toString());
     });
@@ -330,15 +370,6 @@ class AdminController extends GetxController {
     return formatter.format(dateTime);
   }
 
-  Future<void> custommerScreen() async {
-    await downloadAds().then((value) {
-      Get.toNamed(Routes.customer);
-    }).onError((error, stackTrace) {
-      AppDialog.showToastError(msg: 'Failed to download ads! $error');
-      print(error);
-    });
-  }
-
   Future<void> downloadAds() async {
     try {
       AppDialog.showDialogLoading();
@@ -408,19 +439,20 @@ class AdminController extends GetxController {
 
   void newQueue(String paxId) {
     disableAddButton(paxId);
+
     _api.addNewQueue(paxId).then((value) async {
       final queueId = value['data']['queueId'];
       printQueue(queueId.toString());
       AppDialog.showToastSuccess(msg: value['description']);
       enableAddButton(paxId);
-
+      onUpdate();
+      updateQueueListApi();
       setRxRequestStatus(Status.COMPLETED);
-      await setRealtimeSoundVideo();
     }).onError((error, stackTrace) async {
       setError(error.toString());
       enableAddButton(paxId);
-      await setRealtime();
-      AppDialog.showToastError(msg: 'Unable to add Queue! $error');
+
+      AppDialog.showToastError(msg: 'Unable to create queue! $error');
       print(error);
     });
   }
@@ -445,7 +477,8 @@ class AdminController extends GetxController {
     _api.addStatusQueue(queueId, '4').then((value) async {
       final number = value['data']['queueNumber'];
       print('Served Queue Number: $number');
-      await setRealtime();
+      updateQueueSecondaryWindows();
+      updateQueueListApi();
       enableButton(paxId);
       enableUpdateStatus(paxId);
       AppDialog.showToastSuccess(msg: value['description']);
@@ -463,7 +496,8 @@ class AdminController extends GetxController {
     _api.addStatusQueue(queueId, '7').then((value) async {
       final number = value['data']['queueNumber'];
       print('void Queue Number: $number');
-      await setRealtime();
+      updateQueueSecondaryWindows();
+      updateQueueListApi();
       enableButton(paxId);
       enableUpdateStatus(paxId);
       AppDialog.showToastSuccess(msg: value['description']);
@@ -481,7 +515,7 @@ class AdminController extends GetxController {
     _api.addStatusQueue(queueId, '4').then((value) async {
       final number = value['data']['queueNumber'];
       print('Served Queue Number: $number');
-      await setRealtime();
+
       apiQueueDetailList(selectedPageNumber.value);
       AppDialog.showToastSuccess(msg: value['description']);
       setRxRequestStatus(Status.COMPLETED);
@@ -496,7 +530,8 @@ class AdminController extends GetxController {
     _api.addStatusQueue(queueId, '7').then((value) async {
       final number = value['data']['queueNumber'];
       print('void Queue Number: $number');
-      await setRealtime();
+      updateQueueSecondaryWindows();
+      updateQueueListApi();
       apiQueueDetailList(selectedPageNumber.value);
       AppDialog.showToastSuccess(msg: value['description']);
       setRxRequestStatus(Status.COMPLETED);
@@ -510,18 +545,35 @@ class AdminController extends GetxController {
 
   void callQueue(String paxId, int queueCount) {
     disableButton(paxId);
+
     _api.callQueue(paxId).then((value) async {
       final number = value['data']['queueNumber'];
       final numberCall = formatQueueNumber(number);
-      callSpeakFunction(numberCall, queueCount);
-      await setRealtime();
-      disableButton(paxId);
-      Timer(Duration(seconds: branch.value.callDelay!), () {
-        enableButton(paxId);
-      });
+      updateQueueListApi();
+      if (secondaryWindowIDs.isEmpty) {
+        callSpeakFunction(numberCall, queueCount);
+        onUpdate();
+        updateQueueSecondaryWindows();
+        updateQueueListApi();
+        disableButton(paxId);
+        Timer(Duration(seconds: branch.value.callDelay!), () {
+          enableButton(paxId);
+        });
 
-      AppDialog.showToastSuccess(msg: value['description']);
-      setRxRequestStatus(Status.COMPLETED);
+        AppDialog.showToastSuccess(msg: value['description']);
+        setRxRequestStatus(Status.COMPLETED);
+      } else {
+        callSecondaryWindows(numberCall, queueCount);
+        onUpdate();
+        updateQueueSecondaryWindows();
+        updateQueueListApi();
+        disableButton(paxId);
+        Timer(Duration(seconds: branch.value.callDelay!), () {
+          enableButton(paxId);
+        });
+        AppDialog.showToastSuccess(msg: value['description']);
+        setRxRequestStatus(Status.COMPLETED);
+      }
     }).onError((error, stackTrace) {
       enableButton(paxId);
       setError(error.toString());
@@ -531,12 +583,13 @@ class AdminController extends GetxController {
   }
 
   void resetQueue() {
+    Get.back();
     AppDialog.showDialogLoading();
     _api.reset().then((value) async {
       AppDialog.showToastSuccess(msg: 'Queue reset successfully.');
-      await setRealtime();
-
-      Get.offAllNamed(Routes.home);
+      updateQueueSecondaryWindows();
+      updateQueueListApi();
+      Get.back();
     }).onError((error, stackTrace) {
       Get.back();
       AppDialog.showToastError(msg: 'Unable to reset! $error');
@@ -585,9 +638,25 @@ class AdminController extends GetxController {
 
   void onItemSelected(String? value, int queueId, String paxId) {
     if (value == 'served') {
-      servedQueue(queueId, paxId);
+      AppDialog.confirmationMsg(
+        title: "Served Queue",
+        message: "Are you sure want to served this queue?",
+        function: () {
+          servedQueue(queueId, paxId);
+          Get.back();
+        },
+        aksiText: "Ok",
+      );
     } else if (value == 'void') {
-      voidQueue(queueId, paxId);
+      AppDialog.confirmationMsg(
+        title: "Void Queue",
+        message: "Are you sure want to void this queue?",
+        function: () {
+          voidQueue(queueId, paxId);
+          Get.back();
+        },
+        aksiText: "Ok",
+      );
     }
   }
 
@@ -652,27 +721,22 @@ class AdminController extends GetxController {
                   textAlign: pw.TextAlign.center,
                 ),
                 pw.SizedBox(height: 5),
-                pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.center,
-                    crossAxisAlignment: pw.CrossAxisAlignment.center,
-                    children: [
-                      pw.Text(
-                        'Cancellation Code: ',
-                        style: const pw.TextStyle(
-                          fontSize: 12,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                      pw.Text(
-                        'AAAA11',
-                        style: pw.TextStyle(
-                          font: font,
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ]),
+                pw.Text(
+                  'Cancellation Code: ',
+                  style: const pw.TextStyle(
+                    fontSize: 12,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.Text(
+                  'AKWFA11',
+                  style: pw.TextStyle(
+                    font: font,
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
                 pw.SizedBox(height: 10),
                 pw.Text(
                   'Thank you for visiting!',
@@ -729,12 +793,12 @@ class AdminController extends GetxController {
                   branch.value.fullName!,
                   style: pw.TextStyle(
                     font: font,
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: pw.FontWeight.bold,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 15),
+                pw.SizedBox(height: 14),
                 pw.Image(
                   pw.MemoryImage(qrCodeBytes!.buffer.asUint8List()),
                   width: 100,
@@ -745,7 +809,7 @@ class AdminController extends GetxController {
                   queueNumber,
                   style: pw.TextStyle(
                     font: font,
-                    fontSize: 16,
+                    fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
                   ),
                   textAlign: pw.TextAlign.center,
@@ -754,33 +818,28 @@ class AdminController extends GetxController {
                 pw.Text(
                   'Scan the QR code above to check your queue status.',
                   style: const pw.TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
                 pw.SizedBox(height: 5),
-                pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.center,
-                    crossAxisAlignment: pw.CrossAxisAlignment.center,
-                    children: [
-                      pw.Text(
-                        'Cancellation Code: ',
-                        style: const pw.TextStyle(
-                          fontSize: 12,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                      pw.Text(
-                        cancelCode,
-                        style: pw.TextStyle(
-                          font: font,
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ]),
-                pw.SizedBox(height: 10),
+                pw.Text(
+                  'Cancellation Code: ',
+                  style: const pw.TextStyle(
+                    fontSize: 10,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.Text(
+                  cancelCode,
+                  style: pw.TextStyle(
+                    font: font,
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 12),
                 pw.Text(
                   'Thank you for visiting!',
                   style: pw.TextStyle(
@@ -792,7 +851,7 @@ class AdminController extends GetxController {
                 pw.Text(
                   '*This alpha-version is not complete and may or may not change further',
                   style: pw.TextStyle(
-                    fontSize: 8,
+                    fontSize: 7,
                     fontStyle: pw.FontStyle.italic,
                   ),
                   textAlign: pw.TextAlign.center,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:number_pagination/number_pagination.dart';
@@ -8,6 +7,7 @@ import 'package:queue_system/routes/app_pages.dart';
 import 'package:queue_system/utils/constan.dart';
 import 'package:queue_system/view/auth_view.dart';
 import 'package:queue_system/view_models/controller/admin_controller.dart';
+import 'package:queue_system/widget/app_dialog.dart';
 import 'package:queue_system/widget/app_error.dart';
 import 'package:queue_system/widget/app_loading.dart';
 import 'package:queue_system/widget/app_text.dart';
@@ -30,12 +30,18 @@ class AdminView extends GetView<AdminController> {
             return const NoInternet();
           }
           if (controller.error.value == 'Request Time Out') {
-            return const TimeOut();
+            return TimeOut(
+              onTryAgain: () {
+                controller.updateQueueListApi();
+              },
+            );
           }
           if (controller.error.value == 'Unautorized') {
             return const AuthView();
           } else {
-            return const TimeOut();
+            return TimeOut(
+              onTryAgain: controller.updateQueueListApi,
+            );
           }
 
         case Status.COMPLETED:
@@ -496,21 +502,29 @@ class AdminView extends GetView<AdminController> {
           child: PopupMenuButton<String>(
             icon: const Icon(Icons.settings),
             onSelected: (String value) {
-              if (value == '1') {
-                controller.custommerScreen();
+              if (value == 'screen') {
+                controller.openSecondaryWindow();
               }
-              if (value == '4') {
-                controller.setRealtime();
-                Get.offAllNamed(Routes.home);
-              } else if (value == '2') {
+              if (value == 'refresh') {
+                controller.updateDataSecondaryWindows();
+                controller.updateQueueListApi();
+              } else if (value == 'printer') {
                 Get.toNamed(Routes.printer);
-              } else if (value == '3') {
-                controller.resetQueue();
+              } else if (value == 'reset') {
+                AppDialog.confirmationMsg(
+                  title: "Reset Queue",
+                  message: "Are you sure want to reset?",
+                  function: () {
+                    controller.resetQueue();
+                    
+                  },
+                  aksiText: "Ok",
+                );
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
               const PopupMenuItem<String>(
-                value: '4',
+                value: 'refresh',
                 child: Row(
                   children: [
                     Icon(Icons.refresh),
@@ -526,7 +540,7 @@ class AdminView extends GetView<AdminController> {
                 ),
               ),
               const PopupMenuItem<String>(
-                value: '1',
+                value: 'screen',
                 child: Row(
                   children: [
                     Icon(Icons.add_to_queue),
@@ -542,7 +556,7 @@ class AdminView extends GetView<AdminController> {
                 ),
               ),
               const PopupMenuItem<String>(
-                value: '2',
+                value: 'printer',
                 child: Row(
                   children: [
                     Icon(Icons.print_rounded),
@@ -558,7 +572,7 @@ class AdminView extends GetView<AdminController> {
                 ),
               ),
               const PopupMenuItem<String>(
-                value: '3',
+                value: 'reset',
                 child: Row(
                   children: [
                     Icon(Icons.restore_page),
@@ -607,13 +621,14 @@ class AdminView extends GetView<AdminController> {
             ],
           ),
           onPressed: () {
-            controller.apiQueueDetailList(controller.selectedPageNumber.value);
             showModalBottomSheet(
                 useRootNavigator: false,
                 isScrollControlled: true,
                 useSafeArea: false,
                 context: context,
                 builder: (context) {
+                  controller
+                      .apiQueueDetailList(controller.selectedPageNumber.value);
                   return Stack(
                     children: [
                       FractionallySizedBox(
@@ -672,12 +687,48 @@ class AdminView extends GetView<AdminController> {
                                           ),
                                         )
                                       : controller.allQueue.isEmpty
-                                          ? const Center(
-                                              child: AppText(
-                                                text: 'No data',
-                                                fontSize: 16,
-                                              ),
-                                            )
+                                          ? controller.buttonRefreshDetail.value
+                                              ? Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  children: [
+                                                    AppText(
+                                                      text:
+                                                          'Something went wrong!',
+                                                      fontSize: 16,
+                                                    ),
+                                                    const SizedBox(
+                                                      height: 15,
+                                                    ),
+                                                    ElevatedButton(
+                                                      style: ElevatedButton
+                                                          .styleFrom(
+                                                        backgroundColor:
+                                                            AppColors.maroon,
+                                                      ),
+                                                      onPressed: () {
+                                                        controller
+                                                            .apiQueueDetailList(
+                                                                controller
+                                                                    .selectedPageNumber
+                                                                    .value);
+                                                      },
+                                                      child: const AppText(
+                                                        text: 'Refresh',
+                                                        fontSize: 16,
+                                                        color: AppColors.white,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )
+                                              : const Center(
+                                                  child: AppText(
+                                                    text: 'No data',
+                                                    fontSize: 16,
+                                                  ),
+                                                )
                                           : ListView.builder(
                                               itemCount:
                                                   controller.allQueue.length,
@@ -834,16 +885,38 @@ class AdminView extends GetView<AdminController> {
                                                                       .toString());
                                                             } else if (value ==
                                                                 'served') {
-                                                              controller
-                                                                  .servedQueueDetail(
-                                                                      queue
-                                                                          .queueId);
+                                                              AppDialog
+                                                                  .confirmationMsg(
+                                                                title:
+                                                                    "Served Queue",
+                                                                message:
+                                                                    "Are you sure want to served this queue?",
+                                                                function: () {
+                                                                  controller
+                                                                      .servedQueueDetail(
+                                                                          queue
+                                                                              .queueId);
+                                                                  Get.back();
+                                                                },
+                                                                aksiText: "Ok",
+                                                              );
                                                             } else if (value ==
                                                                 'void') {
-                                                              controller
-                                                                  .voidQueueDetail(
-                                                                      queue
-                                                                          .queueId);
+                                                              AppDialog
+                                                                  .confirmationMsg(
+                                                                title:
+                                                                    "Void Queue",
+                                                                message:
+                                                                    "Are you sure want to served this void?",
+                                                                function: () {
+                                                                  controller
+                                                                      .voidQueueDetail(
+                                                                          queue
+                                                                              .queueId);
+                                                                  Get.back();
+                                                                },
+                                                                aksiText: "Ok",
+                                                              );
                                                             }
                                                           },
                                                           itemBuilder:

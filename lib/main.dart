@@ -1,14 +1,20 @@
-import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
 
+import 'dart:io';
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:queue_system/routes/app_pages.dart';
 import 'package:queue_system/utils/constan.dart';
+import 'package:queue_system/view/customer_view.dart';
+import 'package:queue_system/widget/app_text.dart';
 import 'package:sizer/sizer.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MyHttpOverrides extends HttpOverrides {
   @override
@@ -19,24 +25,32 @@ class MyHttpOverrides extends HttpOverrides {
   }
 }
 
-Future main() async {
+Future<void> main(List<String> args) async {
   HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(
-    url: 'https://ofzthdnbmmyoqmclyhvk.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9menRoZG5ibW15b3FtY2x5aHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTU5MzA0MjIsImV4cCI6MjAzMTUwNjQyMn0.0-Q59gfj4m8qk_OgvE6NOK4E6MNl54rSEEQa90-uyBY',
-  );
   MediaKit.ensureInitialized();
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
   await dotenv.load(fileName: ".env");
-  runApp(const QueueApp());
+  runApp(MainApp(args));
+}
+
+class MainApp extends StatelessWidget {
+  final List<String> args;
+  const MainApp(this.args, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return args.isNotEmpty && args.first == "multi_window"
+        ? SecondaryWindow(windowID: int.parse(args[1]))
+        : const QueueApp(windowID: 0);
+  }
 }
 
 class QueueApp extends StatelessWidget {
-  const QueueApp({super.key});
+  final int windowID;
+  const QueueApp({super.key, required this.windowID});
 
   @override
   Widget build(BuildContext context) {
@@ -59,3 +73,4 @@ class QueueApp extends StatelessWidget {
     });
   }
 }
+

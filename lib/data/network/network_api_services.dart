@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:queue_system/data/app_exceptions.dart';
 import 'package:queue_system/data/network/base_api_services.dart';
 import 'package:queue_system/data/response/license_key.dart';
+import 'package:queue_system/routes/app_pages.dart';
 
 class NetworkApiService extends BaseApiServices {
   @override
@@ -86,6 +89,9 @@ class NetworkApiService extends BaseApiServices {
       case 401:
         throw UnautorizedException('');
       case 403:
+        const storage = FlutterSecureStorage();
+        storage.deleteAll();
+        Get.offAllNamed(Routes.auth);
         throw UnautorizedException('');
       default:
         throw FetchDataException(
