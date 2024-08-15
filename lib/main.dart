@@ -1,61 +1,58 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'dart:io';
-import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:queue_system/data/network/base_api_services.dart';
+
 import 'package:queue_system/routes/app_pages.dart';
 import 'package:queue_system/utils/constan.dart';
 import 'package:queue_system/view/customer_view.dart';
-import 'package:queue_system/widget/app_text.dart';
 import 'package:sizer/sizer.dart';
-
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
-  }
-}
+import 'package:slack_logger/slack_logger.dart';
+import 'package:video_player_win/video_player_win_plugin.dart';
+import 'package:window_manager/window_manager.dart';
 
 Future<void> main(List<String> args) async {
-  HttpOverrides.global = MyHttpOverrides();
+  final isSubWindow = (args.isNotEmpty && args.first == "multi_window");
   WidgetsFlutterBinding.ensureInitialized();
-  MediaKit.ensureInitialized();
+  await windowManager.ensureInitialized();
+  final httpLocal = await const FlutterSecureStorage().read(key: 'base_url');
+  if (httpLocal != null) {
+    await BaseApiServices.initializeBaseUrl();
+  }
+  if (!kIsWeb && Platform.isWindows) WindowsVideoPlayer.registerWith();
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
-  await dotenv.load(fileName: ".env");
-  runApp(MainApp(args));
-}
+  if (!isSubWindow) {
+    runApp(const QueueApp());
+    windowManager.waitUntilReadyToShow(const WindowOptions(), () async {
+      await windowManager.setTitle("BISA Online Queue System");
+      await windowManager.show();
+    });
+  } else {
+    runApp(const SecondaryWindow());
 
-class MainApp extends StatelessWidget {
-  final List<String> args;
-  const MainApp(this.args, {super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return args.isNotEmpty && args.first == "multi_window"
-        ? SecondaryWindow(windowID: int.parse(args[1]))
-        : const QueueApp(windowID: 0);
+    windowManager.waitUntilReadyToShow(const WindowOptions(fullScreen: true),
+        () async {
+      await windowManager.show();
+    });
   }
 }
 
 class QueueApp extends StatelessWidget {
-  final int windowID;
-  const QueueApp({super.key, required this.windowID});
+  const QueueApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+     SlackLogger(webhookUrl: SlackInit.url,);
     return Sizer(builder: (context, orientation, deviceType) {
       return GetMaterialApp(
+        navigatorKey: NavigationService.navigatorKey,
         initialRoute: AppPages.initial,
         getPages: AppPages.routes,
         debugShowCheckedModeBanner: false,
@@ -73,4 +70,3 @@ class QueueApp extends StatelessWidget {
     });
   }
 }
-

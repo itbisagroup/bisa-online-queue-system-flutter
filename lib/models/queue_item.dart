@@ -1,102 +1,50 @@
-
+import 'package:queue_system/models/pax.dart';
 import 'package:queue_system/models/queue.dart';
 
-class QueueResponse {
-  final bool success;
-  final int code;
-  final String description;
-  final QueueData data;
 
-  QueueResponse({
-    required this.success,
-    required this.code,
-    required this.description,
-    required this.data,
-  });
 
-  factory QueueResponse.fromJson(Map<String, dynamic> json) {
-    return QueueResponse(
-      success: json['success'],
-      code: json['code'],
-      description: json['description'],
-      data: QueueData.fromJson(json['data']),
-    );
-  }
-}
 
-class QueueData {
-  final List<QueueList> queues;
-  final Pages pages;
-  final Params params;
-
-  QueueData({
-    required this.queues,
-    required this.pages,
-    required this.params,
-  });
-
-  factory QueueData.fromJson(Map<String, dynamic> json) {
-    return QueueData(
-      queues: (json['queues'] as List)
-          .map((queue) => QueueList.fromJson(queue))
-          .toList(),
-      pages: Pages.fromJson(json['pages']),
-      params: Params.fromJson(json['params']),
-    );
-  }
-}
 
 class QueueList {
-  final int queueId;
+  final String queueCode;
+  final int queueQty;
   final String queueNumber;
-  final String qrCode;
   final String cancelCode;
-  final dynamic latestCall;
+  final String latestCall;
+  final String createdAt;
   final int callCount;
   final int printCount;
-
   final Pax pax;
   final StatusQueue status;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   QueueList({
-    required this.queueId,
+    required this.queueCode,
+    required this.queueQty,
     required this.queueNumber,
-    required this.qrCode,
     required this.cancelCode,
     required this.latestCall,
+    required this.createdAt,
     required this.callCount,
     required this.printCount,
     required this.pax,
     required this.status,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory QueueList.fromJson(Map<String, dynamic> json) {
     return QueueList(
-      queueId: json['queueId'],
+      queueCode: json['queueCode'],
+      queueQty: json['queueQty'],
       queueNumber: json['queueNumber'],
-      qrCode: json['qrCode'],
       cancelCode: json['cancelCode'],
-      latestCall: json['latestCall'],
+      latestCall:json['latestCall'] != null ? json['latestCall']['date'] : '',
+      createdAt:json['createdAt'] != null ? json['createdAt']['date'] : '',
       callCount: json['callCount'],
       printCount: json['printCount'],
-
       pax: Pax.fromJson(json['pax']),
       status: StatusQueue.fromJson(json['status']),
-      createdAt: DateTime.parse(json['createdAt']['date']),
-      updatedAt: DateTime.parse(json['updatedAt']['date']),
     );
   }
 }
-
-
-
-
-
-
 class Pages {
   final int showData;
   final int totalData;
@@ -125,6 +73,7 @@ class Pages {
     );
   }
 }
+
 
 class Params {
   final String search;

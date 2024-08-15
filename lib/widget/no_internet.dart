@@ -19,7 +19,7 @@ class NoInternet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Center(child: Image.asset('assets/images/nointernet.webp',height: 300,width: 300,)),
-              SizedBox(height: 10,),
+              const SizedBox(height: 10,),
               SizedBox(
                 width: 200,
                 height: 50,

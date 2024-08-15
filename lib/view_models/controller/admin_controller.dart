@@ -1,101 +1,245 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
-import 'dart:ui';
+
+import 'package:circular_countdown_timer/circular_countdown_timer.dart';
+import 'package:cron/cron.dart';
+import 'package:desktop_window/desktop_window.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_window_close/flutter_window_close.dart';
+import 'package:queue_system/models/ads.dart';
+import 'package:queue_system/models/branch.dart';
+import 'package:queue_system/models/pax.dart';
+import 'package:queue_system/repository/branch_repository.dart';
+import 'package:queue_system/repository/sync_repository.dart';
+import 'package:queue_system/routes/app_pages.dart';
+import 'package:queue_system/utils/log.dart';
+import 'package:queue_system/view_models/controller/printer_controller.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
-import 'dart:io';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:queue_system/data/network/base_api_services.dart';
 import 'package:queue_system/data/response/status.dart';
 import 'package:queue_system/models/queue.dart';
 import 'package:queue_system/models/queue_item.dart';
-import 'package:queue_system/routes/app_pages.dart';
+import 'package:queue_system/utils/audio_player.dart';
 import 'package:queue_system/utils/constan.dart';
-import 'package:queue_system/utils/secure_storage.dart';
 import 'package:queue_system/widget/app_dialog.dart';
-import 'package:http/http.dart' as http;
-
-import '../../repository/home_repository.dart';
+import 'package:queue_system/widget/app_text.dart';
+import '../../repository/queue_repository.dart';
 
 class AdminController extends GetxController {
-  final _api = HomeRepository();
-  final branch = Branch().obs;
-  final pax = <PaxWithQueue>[].obs;
+  final _apiQueue = QueueRepository();
+  final _apiBranch = BranchRepository();
+  final LogApp _logApp = LogApp();
+  final apiSync = SyncRepository();
+  final _apiSync = SyncRepository();
+  final storage = const FlutterSecureStorage();
   final ads = <Ads>[].obs;
-  final queues = <Queue>[].obs;
+  final branch = Branch().obs;
+
+  final paxWithQueue = <PaxWithQueue>[].obs;
+  final pax = <Pax>[].obs;
+  final withhold = <Withhold>[].obs;
   final allQueue = <QueueList>[];
   final Map<String, RxBool> buttonCall = {};
   final Map<String, RxBool> buttonAdd = {};
   final Map<String, RxBool> updateStatus = {};
+  final AudioPlayerWav audioPlayer = AudioPlayerWav();
   RxString error = ''.obs;
   final rxRequestStatus = Status.LOADING.obs;
   final TextEditingController textEditingController = TextEditingController();
-  var currentDate = ''.obs;
-  var currentTime = ''.obs;
   var isLoading = false.obs;
+  var withHoldVisible = true.obs;
+  var statusSynch = ''.obs;
+  var lastSynch = ''.obs;
+  var statusCron = true.obs;
+  var lastCrone = ''.obs;
   var buttonRefreshDetail = false.obs;
+  final controllerCountdDown = CountDownController();
   var statusRealtime = false.obs;
-  late final player = Player();
-  late final controllerVideo = VideoController(player);
   var color = Colors.black.obs;
-  var isMenuOpen = false.obs;
-  final FlutterTts flutterTts = FlutterTts();
   var availableLanguages = <String>[].obs;
   var selectedPageNumber = 1.obs;
+  var statusValueFilter = 0.obs;
   var pageTotal = 1.obs;
+  var currentDay = 0.obs;
+  Rx<DateTime> currentTime = DateTime.now().obs;
+  var totalData = 0.obs;
   var loading = false.obs;
+
   final List<int> secondaryWindowIDs = [];
+  final printer = Get.put(PrinterController());
+  late Timer timerDialog;
+
+  final _isDialogOpen = false.obs;
 
   @override
   Future<void> onInit() async {
     super.onInit();
-    queueListApi();
-  }
 
-  void setRxRequestStatus(Status _value) => rxRequestStatus.value = _value;
-  void setError(String _value) => error.value = _value;
+    await queueListApi();
+    final title = await storage.read(key: 'env_title');
+    final label = await storage.read(key: 'env_label');
+    final videoPath = await storage.read(key: 'env_path');
+    if (title == null || label == null) {
+      await storage.write(key: 'env_title', value: 'Nomor Antrian');
+      await storage.write(
+          key: 'env_label', value: 'Silahkan Konfirmasi ke Greeter');
+    }
+    if (videoPath == null) {
+      await storage.write(
+          key: 'env_path',
+          value: 'd:/laragon/www/bisa-online-queue/public/assets/ads/');
+    }
+    runCronTask();
+    timerDialogEndShift();
+    FlutterWindowClose.setWindowShouldCloseHandler(() async {
+      if (_isDialogOpen.value) {
+        return false;
+      }
+      _isDialogOpen.value = true;
+      final shouldClose = await showDialog<bool>(
+        context: NavigationService.navigatorKey.currentContext!,
+        builder: (context) {
+          return AlertDialog(
+            title: const AppText(
+              text: 'Do you really want to quit?',
+              fontSize: 20,
+              fontWeight: FontWeight.normal,
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () async {
+                  _isDialogOpen.value = false;
 
-  void openSecondaryWindow() async {
-    await downloadAds().then((value) {
-      Get.toNamed(Routes.customer);
-    }).onError((error, stackTrace) {
-      DesktopMultiWindow.createWindow(jsonEncode({'args1': 'Sub window'}))
-          .then((value) {
-        secondaryWindowIDs.add(value.windowId);
-
-        value
-          ..setFrame(const Offset(0, 0) & const Size(1280, 720))
-          ..center()
-          ..setTitle("")
-          ..show();
-      });
-      Timer(Duration(seconds: 2), () {
-        updateQueueSecondaryWindows();
-        updateDataSecondaryWindows();
-      });
+                  if (secondaryWindowIDs.isNotEmpty) {
+                    await closeSecondaryWindow();
+                  }
+                  Navigator.of(context).pop(true);
+                },
+                child: const AppText(
+                  text: 'Yes',
+                  fontSize: 16,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  _isDialogOpen.value = false;
+                  Navigator.of(context).pop(false);
+                },
+                child: const AppText(
+                  text: 'No',
+                  fontSize: 16,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+            ],
+          );
+        },
+      );
+      _isDialogOpen.value = false;
+      return shouldClose ?? false;
     });
   }
 
+  timerDialogEndShift() async {
+    final String? shiftDate = await storage.read(key: 'shift_date');
+    String formattedDate = DateFormat('yyyy-MM-dd').format(currentTime.value);
+
+    if (shiftDate != formattedDate && shiftDate != null) {
+      Future.delayed(const Duration(seconds: 5), () {
+        AppDialog.showToastShiftEnd(
+            title: "Info",
+            desc:
+                "Don't forget to end the shift. Would you like to end it now?",
+            ok: () {
+              Get.toNamed(Routes.shift);
+            });
+      });
+    }
+  }
+
+  void setRxRequestStatus(Status value) => rxRequestStatus.value = value;
+  void setError(String value) => error.value = value;
+
+  void runCronTask() {
+    var cron = Cron();
+    bool? previousStatus;
+
+    cron.schedule(Schedule.parse('* * * * *'), () async {
+      try {
+        await apiSync.sendData();
+        statusCron.value = true;
+        lastCrone.value = DateFormat('hh:mm').format(DateTime.now());
+
+        if (previousStatus != true) {
+          _logApp.sendSlackLog(branch.value.fullName!, "cron running");
+        }
+
+        previousStatus = true;
+      } catch (error) {
+        statusCron.value = false;
+        lastCrone.value = DateFormat('hh:mm').format(DateTime.now());
+
+        if (previousStatus != false) {
+          await _logApp.writeLog("Failed cron ${error.toString()}");
+          _logApp.sendSlackLog(branch.value.fullName!, "Failed cron ${error.toString()}");
+        }
+
+        previousStatus = false;
+      }
+    });
+  }
+
+  Future<void> openSecondaryWindow() async {
+    Size size = await DesktopWindow.getWindowSize();
+    final x = size.width + 100;
+
+    DesktopMultiWindow.createWindow(jsonEncode({'args1': 'Sub window'}))
+        .then((value) async {
+      secondaryWindowIDs.add(value.windowId);
+      value
+        ..setFrame(Rect.fromLTWH(x, 0, 600, 600))
+        ..setTitle("")
+        ..show();
+    });
+    Timer(const Duration(seconds: 2), () {
+      updateQueueSecondaryWindows();
+      updateDataSecondaryWindows();
+    });
+  }
+
+  Future<void> closeSecondaryWindow() async {
+    for (var element in secondaryWindowIDs) {
+      await WindowController.fromWindowId(element).close();
+    }
+    secondaryWindowIDs.clear();
+  }
+
   List<String?> getAllQueueNumbers() {
-    return pax.map((paxWithQueue) => paxWithQueue.queue?.queueNumber).toList();
+    List<String?> notation =
+        paxWithQueue.map((paxWithQueue) => paxWithQueue.pax?.notation).toList();
+
+    List<String?> queue = paxWithQueue
+        .map((paxWithQueue) => paxWithQueue.queue?.queueNumber)
+        .toList();
+
+    for (int i = 0; i < queue.length; i++) {
+      if (queue[i] == "0000") {
+        queue[i] = "${notation[i]}000";
+      }
+    }
+
+    return queue;
   }
 
   List<String?> getAllAdsNumbers() {
     return ads.map((ad) => ad.content).toList();
   }
 
-  void updateQueueSecondaryWindows() {
+  Future<void> updateQueueSecondaryWindows() async {
     // Get all queue numbers
     List<String?> queueNumbers = getAllQueueNumbers();
     String jsonDataList = jsonEncode(queueNumbers);
@@ -105,26 +249,58 @@ class AdminController extends GetxController {
     }
   }
 
-  void onUpdate() {
-    String jsonDataList = jsonEncode(true);
-
+  Future<void> updateCallText() async {
     for (var windowID in secondaryWindowIDs) {
-      DesktopMultiWindow.invokeMethod(windowID, "updateScreen", jsonDataList);
+      DesktopMultiWindow.invokeMethod(
+          windowID, "updateCallText", 'jsonDataList');
     }
   }
 
-  void callSecondaryWindows(String number, int queueCount) {
+  Future<void> updatePathVideo() async {
+    for (var windowID in secondaryWindowIDs) {
+      DesktopMultiWindow.invokeMethod(
+          windowID, "updatePathVideo", 'jsonDataList');
+    }
+  }
+
+  Future<void> onUpdate() async {
+    String jsonDataList = jsonEncode(true);
+
+    for (var windowID in secondaryWindowIDs) {
+      DesktopMultiWindow.invokeMethod(windowID, "refresh", jsonDataList);
+    }
+  }
+
+  void sync() async {
+    statusSynch.value = 'Syncing...';
+    lastSynch.value = '';
+    updateQueueListApi();
+    if (secondaryWindowIDs.isNotEmpty) {
+      await updateDataSecondaryWindows();
+      await updateQueueSecondaryWindows();
+    }
+    _apiSync.getData().then((value) async {
+      statusSynch.value = 'Synced';
+      lastSynch.value = DateFormat('dd/MM/yyyy hh:mm').format(DateTime.now());
+    }).onError((error, stackTrace) async {
+      await _logApp.writeLog(" Failed syncing ${error.toString()}");
+      statusSynch.value = 'Failed[$error]';
+      lastSynch.value = DateFormat('dd/MM/yyyy hh:mm').format(DateTime.now());
+    });
+  }
+
+  Future<void> callSecondaryWindows(String number, int queueCount) async {
     // Get all queue numbers
-    String numberCall = jsonEncode(number);
+    String numberTextView = jsonEncode(number);
     String callCount = jsonEncode(queueCount);
 
     for (var windowID in secondaryWindowIDs) {
       DesktopMultiWindow.invokeMethod(windowID, "callCount", callCount);
-      DesktopMultiWindow.invokeMethod(windowID, "callQueue", numberCall);
+      DesktopMultiWindow.invokeMethod(windowID, "callQueue", numberTextView);
     }
   }
 
-  void updateDataSecondaryWindows() {
+  Future<void> updateDataSecondaryWindows() async {
     // Get all queue numbers
     List<String?> ads = getAllAdsNumbers();
     String jsonAdsList = jsonEncode(ads);
@@ -132,14 +308,21 @@ class AdminController extends GetxController {
     String logo = jsonEncode(branch.value.brand!.logo);
     String playAds = jsonEncode(branch.value.playAds);
     String maxCall = jsonEncode(branch.value.callCount);
+    String callRepeat = jsonEncode(branch.value.callRepeat);
+    String brand = jsonEncode(branch.value.brand!.fullName!);
     String address = jsonEncode(branch.value.address);
     String city = jsonEncode(branch.value.city);
     String province = jsonEncode(branch.value.province);
     for (var windowID in secondaryWindowIDs) {
-      DesktopMultiWindow.invokeMethod(windowID, "updateAds", jsonAdsList);
+      if (ads.isNotEmpty) {
+        DesktopMultiWindow.invokeMethod(windowID, "updateAds", jsonAdsList);
+      }
+
       DesktopMultiWindow.invokeMethod(windowID, "updateFullname", fullName);
+      DesktopMultiWindow.invokeMethod(windowID, "callRepeat", callRepeat);
       DesktopMultiWindow.invokeMethod(windowID, "updateLogo", logo);
       DesktopMultiWindow.invokeMethod(windowID, "updatePlayAds", playAds);
+      DesktopMultiWindow.invokeMethod(windowID, "updateBrand", brand);
       DesktopMultiWindow.invokeMethod(windowID, "maxCallQueue", maxCall);
       DesktopMultiWindow.invokeMethod(windowID, "address", address);
       DesktopMultiWindow.invokeMethod(windowID, "city", city);
@@ -147,176 +330,192 @@ class AdminController extends GetxController {
     }
   }
 
-  bool isButtonDisabled(String uuid) {
-    if (!buttonCall.containsKey(uuid)) {
-      buttonCall[uuid] = false.obs;
+  bool isButtonDisabled(String id) {
+    if (!buttonCall.containsKey(id)) {
+      buttonCall[id] = false.obs;
     }
-    return buttonCall[uuid]!.value;
+    return buttonCall[id]!.value;
   }
 
-  void disableButton(String uuid) {
-    if (!buttonCall.containsKey(uuid)) {
-      buttonCall[uuid] = false.obs;
+  void disableButton(String id) {
+    if (!buttonCall.containsKey(id)) {
+      buttonCall[id] = false.obs;
     }
-    buttonCall[uuid]!.value = true;
+    buttonCall[id]!.value = true;
   }
 
-  void enableButton(String uuid) {
-    if (buttonCall.containsKey(uuid)) {
-      buttonCall[uuid]!.value = false;
-    }
-  }
-
-  bool isButtonAddDisabled(String uuid) {
-    if (!buttonAdd.containsKey(uuid)) {
-      buttonAdd[uuid] = false.obs;
-    }
-    return buttonAdd[uuid]!.value;
-  }
-
-  void disableAddButton(String uuid) {
-    if (!buttonAdd.containsKey(uuid)) {
-      buttonAdd[uuid] = false.obs;
-    }
-    buttonAdd[uuid]!.value = true;
-  }
-
-  void enableAddButton(String uuid) {
-    if (buttonAdd.containsKey(uuid)) {
-      buttonAdd[uuid]!.value = false;
+  void enableButton(String id) {
+    if (buttonCall.containsKey(id)) {
+      buttonCall[id]!.value = false;
     }
   }
 
-  bool isupdateStatusDisabled(String uuid) {
-    if (!updateStatus.containsKey(uuid)) {
-      updateStatus[uuid] = false.obs;
+  bool isButtonAddDisabled(String id) {
+    if (!buttonAdd.containsKey(id)) {
+      buttonAdd[id] = false.obs;
     }
-    return updateStatus[uuid]!.value;
+    return buttonAdd[id]!.value;
   }
 
-  void disableUpdateStatus(String uuid) {
-    if (!updateStatus.containsKey(uuid)) {
-      updateStatus[uuid] = false.obs;
+  void disableAddButton(String id) {
+    if (!buttonAdd.containsKey(id)) {
+      buttonAdd[id] = false.obs;
     }
-    updateStatus[uuid]!.value = true;
+    buttonAdd[id]!.value = true;
   }
 
-  void enableUpdateStatus(String uuid) {
-    if (updateStatus.containsKey(uuid)) {
-      updateStatus[uuid]!.value = false;
+  void enableAddButton(String id) {
+    if (buttonAdd.containsKey(id)) {
+      buttonAdd[id]!.value = false;
     }
   }
 
-  void queueListApi() async {
-    _api.getDetailQueue().then((value) async {
+  bool isupdateStatusDisabled(String id) {
+    if (!updateStatus.containsKey(id)) {
+      updateStatus[id] = false.obs;
+    }
+    return updateStatus[id]!.value;
+  }
+
+  Future<void> disableUpdateStatus(String id) async {
+    if (!updateStatus.containsKey(id)) {
+      updateStatus[id] = false.obs;
+    }
+    updateStatus[id]!.value = true;
+  }
+
+  Future<void> enableUpdateStatus(String id) async {
+    if (updateStatus.containsKey(id)) {
+      updateStatus[id]!.value = false;
+    }
+  }
+
+  Future<void> branchData() async {
+    _apiBranch.getBranch().then((value) async {
       branch.refresh();
-      pax.clear();
       ads.clear();
-      queues.clear();
+      pax.clear();
       branch.value = Branch.fromJson(value);
 
-      // Periksa jika data 'pax' tidak null
-      if (value['data']['pax'] != null) {
-        final List<dynamic> listPax = value['data']['pax'];
-        pax.addAll(listPax.map((json) {
-          final paxData = Pax.fromJson(json);
-          // Mencari current queue untuk pax tertentu
-          final queue = Queue.fromJson(value['data']['queue']['current']
-              .firstWhere((element) => element.keys.first == paxData.uuid,
-                  orElse: () => {}));
-          return PaxWithQueue(pax: paxData, queue: queue);
-        }).toList());
-      }
+      final List<dynamic> listPax = value['data']['pax'];
+      pax.addAll(listPax.map((json) => Pax.fromJson(json)).toList());
 
       final List<dynamic> listAds = value['data']['ads'];
       ads.addAll(listAds.map((json) => Ads.fromJson(json)).toList());
-
-      final List<dynamic>? listQueue = value['data']['queue']['current'];
-      if (listQueue != null) {
-        queues.addAll(listQueue.map((json) => Queue.fromJson(json)).toList());
-      }
-      setRxRequestStatus(Status.COMPLETED);
-    }).onError((error, stackTrace) {
+    }).onError((error, stackTrace) async {
       setError(error.toString());
-      print(error);
+      await _logApp.writeLog(" Failed get branch API ${error.toString()}");
       setRxRequestStatus(Status.ERROR);
     });
   }
 
-  void updateQueueListApi() {
+  Future<void> queueListApi() async {
+    await branchData();
+    _apiQueue.getDetailQueue().then((value) async {
+      if (pax.isNotEmpty) {
+        paxWithQueue.addAll(pax.map((json) {
+          // Mencari current queue untuk pax tertentu
+          final queue = Queue.fromJson(value['data']['queue']['current']
+              .firstWhere((element) => element.keys.first == json.id,
+                  orElse: () => {}));
+          final withhold = Withhold.fromJson(value['data']['queue']['withhold']
+              .firstWhere((element) => element.keys.first == json.id,
+                  orElse: () => {}));
+
+          return PaxWithQueue(pax: json, queue: queue, withhold: withhold);
+        }).toList());
+      }
+
+      withhold.addAll(paxWithQueue
+          .map((paxWithQueue) => paxWithQueue.withhold!)
+          .where((item) => item.queueNumber != "0000")
+          .toList());
+
+      setRxRequestStatus(Status.COMPLETED);
+    }).onError((error, stackTrace) async {
+      setError(error.toString());
+      await _logApp.writeLog(" Failed get queue view API ${error.toString()}");
+      setRxRequestStatus(Status.ERROR);
+    });
+  }
+
+  Future<void> updateQueueListApi() async {
     AppDialog.showDialogLoading();
-    _api.getDetailQueue().then((value) {
-      branch.refresh();
-      pax.clear();
-      ads.clear();
-      queues.clear();
-      branch.value = Branch.fromJson(value);
+    _apiQueue.getDetailQueue().then((value) {
+      paxWithQueue.clear();
+      withhold.clear();
 
-      // Periksa jika data 'pax' tidak null
-      if (value['data']['pax'] != null) {
-        final List<dynamic> listPax = value['data']['pax'];
-        pax.addAll(listPax.map((json) {
-          final paxData = Pax.fromJson(json);
-          // Mencari current queue untuk pax tertentu
+      if (pax.isNotEmpty) {
+        paxWithQueue.addAll(pax.map((json) {
           final queue = Queue.fromJson(value['data']['queue']['current']
-              .firstWhere((element) => element.keys.first == paxData.uuid,
+              .firstWhere((element) => element.keys.first == json.id,
                   orElse: () => {}));
-          return PaxWithQueue(pax: paxData, queue: queue);
+          final withhold = Withhold.fromJson(value['data']['queue']['withhold']
+              .firstWhere((element) => element.keys.first == json.id,
+                  orElse: () => {}));
+
+          return PaxWithQueue(pax: json, queue: queue, withhold: withhold);
         }).toList());
       }
-      final List<dynamic> listAds = value['data']['ads'];
-      ads.addAll(listAds.map((json) => Ads.fromJson(json)).toList());
 
-      final List<dynamic>? listQueue = value['data']['queue']['current'];
-      if (listQueue != null) {
-        queues.addAll(listQueue.map((json) => Queue.fromJson(json)).toList());
-      }
+      withhold.addAll(paxWithQueue
+          .map((paxWithQueue) => paxWithQueue.withhold!)
+          .where((item) => item.queueNumber != "0000")
+          .toList());
+
       Get.back();
       setRxRequestStatus(Status.COMPLETED);
-    }).onError((error, stackTrace) {
+    }).onError((error, stackTrace) async {
       setRxRequestStatus(Status.ERROR);
       setError(error.toString());
       Get.back();
-      print(error);
+      await _logApp.writeLog(" Failed get queue view API ${error.toString()}");
     });
   }
 
-  void apiQueueDetailList(int pageNumber) {
+  Future<void> apiQueueDetailList() async {
     isLoading(true);
-    _api.getAllQueue(pageNumber).then((value) {
+    _apiQueue
+        .getAllQueue(
+            selectedPageNumber.value, statusValueFilter.value.toString())
+        .then((value) {
       isLoading(false);
       allQueue.clear();
-      for (var item in value['data']['queues']) {
-        allQueue.add(QueueList.fromJson(item));
-      }
+      final List<dynamic> listQueue = value['data']['queues'];
+
+      allQueue
+          .addAll(listQueue.map((json) => QueueList.fromJson(json)).toList());
+      totalData.value = value['data']['pages']['totalData'];
       pageTotal.value = value['data']['pages']['totalPages'];
       buttonRefreshDetail.value = false;
       setRxRequestStatus(Status.COMPLETED);
-    }).onError((error, stackTrace) {
+    }).onError((error, stackTrace) async {
       isLoading(false);
-      if (error.toString() =='Request Time Out') {
+      if (error.toString() == 'Request Time Out') {
         buttonRefreshDetail.value = true;
         allQueue.clear();
       }
       setError(error.toString());
-      print(error.toString());
+      await _logApp.writeLog(" Failed get queue index API ${error.toString()}");
     });
   }
 
   void apiQueueDetailSearch(String search) {
     isLoading(true);
-    _api.searchAllQueue(search).then((value) {
+    _apiQueue.searchAllQueue(search).then((value) {
       isLoading(false);
       allQueue.clear();
-      for (var item in value['data']['queues']) {
-        allQueue.add(QueueList.fromJson(item));
-      }
+      final List<dynamic> listQueue = value['data']['queues'];
+      allQueue
+          .addAll(listQueue.map((json) => QueueList.fromJson(json)).toList());
+      totalData.value = value['data']['pages']['totalData'];
       pageTotal.value = value['data']['pages']['totalPages'];
       setRxRequestStatus(Status.COMPLETED);
-    }).onError((error, stackTrace) {
+    }).onError((error, stackTrace) async {
       isLoading(false);
       setError(error.toString());
-      print(error.toString());
+      await _logApp
+          .writeLog(" Failed search queue index API ${error.toString()}");
     });
   }
 
@@ -348,301 +547,424 @@ class AdminController extends GetxController {
     }
   }
 
-  String formatDynamicDate(dynamic date) {
-    // Jika tanggal null, kembalikan pesan yang sesuai
-    if (date == null || date['date'] == null) {
+  String formatDate(String dateString) {
+    if (dateString == '') {
       return '';
     }
-
-    // Parsing string tanggal menjadi objek DateTime
-    DateTime parsedDate = DateTime.parse(date['date']);
-
-    // Format tanggal sesuai yang diinginkan
-    String formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(parsedDate);
-
-    return formattedDate;
+    DateTime dateTime = DateTime.parse(dateString);
+    return DateFormat('dd/MM/yyyy hh:mm').format(dateTime);
   }
 
-  String formatDate(DateTime dateTime) {
-    // Membuat formatter untuk format yang diinginkan
-    final formatter = DateFormat('dd/MM/yyyy HH:mm');
-    // Menggunakan formatter untuk memformat tanggal dan waktu
-    return formatter.format(dateTime);
-  }
-
-  Future<void> downloadAds() async {
-    try {
-      AppDialog.showDialogLoading();
-      final String? key = await SecureStorage().getKey();
-      for (var ad in ads) {
-        var videoDirectory = await getApplicationDocumentsDirectory();
-        var path = "${videoDirectory.path}/assets/videos/";
-        var filePathAndName = '$path/${ad.content}';
-        File video = File(filePathAndName);
-
-        // Check if the file already exists
-        if (await video.exists()) {
-          print('File already exists: ${ad.uuid}');
-          continue;
-        }
-
-        final url =
-            Uri.parse('${BaseApiServices.adsEndpoint}/${ad.uuid}/download');
-        Map<String, String> requestExtraHeaders = {'Queue': key!};
-        final response = await http
-            .get(url, headers: requestExtraHeaders)
-            .timeout(Duration(minutes: 1));
-        if (response.statusCode == 200) {
-          await Directory(path).create(recursive: true);
-          await video.writeAsBytes(response.bodyBytes);
-          print('Successfully downloaded ${ad.uuid}');
-        } else {
-          AppDialog.showToastError(msg: response.statusCode.toString());
-          print('Failed to download ad with UUID: ${ad.uuid}');
-        }
-      }
-    } catch (e) {
-      Get.back();
-      AppDialog.showToastError(msg: 'Failed to download ads!: $e');
-      print(e.toString());
-    } finally {
-      Get.back();
-    }
-  }
-
-  Future<void> clearDirectory() async {
-    try {
-      final documentDirectory = await getApplicationDocumentsDirectory();
-      final directory = Directory('${documentDirectory.path}/assets/videos/');
-      if (await directory.exists()) {
-        // Get all entities (files and subdirectories)
-        final entities = directory.listSync(recursive: true);
-
-        // Iterate in reverse order to avoid issues with deleting parent directories
-        for (var entity in entities.reversed) {
-          if (entity is File) {
-            await entity.delete();
-            print('Deleted file: ${entity.path}'); // Optional for logging
-          } else if (entity is Directory) {
-            await entity.delete(recursive: true);
-            print('Deleted directory: ${entity.path}');
-          }
-        }
-      } else {
-        print(
-            'Directory does not exist: ${documentDirectory.path}/assets/videos/');
-      }
-    } catch (e) {
-      print('Error deleting directory: $e');
-    }
-  }
-
-  void newQueue(String paxId) {
+  Future<void> newQueue(String paxId, String paxQuantity) async {
     disableAddButton(paxId);
 
-    _api.addNewQueue(paxId).then((value) async {
-      final queueId = value['data']['queueId'];
-      printQueue(queueId.toString());
-      AppDialog.showToastSuccess(msg: value['description']);
-      enableAddButton(paxId);
-      onUpdate();
-      updateQueueListApi();
+    _apiQueue.addNewQueue(paxId, paxQuantity).then((value) async {
+      final queueId = value['data']['queue']['queueCode'];
+      String queueNumber = value['data']['queue']['queueNumber'];
+
+      await AppDialog.showToastSuccess(
+        title: queueNumber,
+        desc: 'Queue $queueNumber created succesfuly',
+        func: () async {
+          await updateQueueListApi();
+          await printQueue(queueId);
+          enableAddButton(paxId);
+        },
+      );
+
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) async {
       setError(error.toString());
       enableAddButton(paxId);
-
-      AppDialog.showToastError(msg: 'Unable to create queue! $error');
-      print(error);
+      AppDialog.showToastError(
+        title: 'Failed!',
+        desc: 'Unable to create queue. Please try again',
+        func: () async {
+          await _logApp
+              .writeLog(" Failed create queue API ${error.toString()}");
+          await _logApp.sendSlackLog(branch.value.fullName!,
+              "Failed create queue API ${error.toString()}");
+        },
+      );
     });
   }
 
-  void printQueue(String queueId) {
-    _api.printQueue(queueId).then((value) async {
-      final number = value['data']['queueNumber'];
-      final cancelCode = value['data']['cancelCode'];
-      final qrData = value['data']['qrCode'];
-      await printQr(number, cancelCode, qrData);
+  Future<void> printQueue(
+    String queueId,
+  ) async {
+    _apiQueue.printQueue(queueId).then((value) async {
+      final number = value['data']['queue']['queueNumber'];
+      final cancelCode = value['data']['queue']['cancelCode'];
+      final qrData = value['data']['queue']['queueCode'];
+      await printer.printQueue(
+          branch.value.fullName!, qrData, number, cancelCode);
 
       setRxRequestStatus(Status.COMPLETED);
-    }).onError((error, stackTrace) {
-      setError(error.toString());
-      AppDialog.showToastError(msg: 'Unable to print! Please print again.');
-      print(error);
-    });
-  }
-
-  void servedQueue(int queueId, String paxId) {
-    disableUpdateStatus(paxId);
-    _api.addStatusQueue(queueId, '4').then((value) async {
-      final number = value['data']['queueNumber'];
-      print('Served Queue Number: $number');
-      updateQueueSecondaryWindows();
-      updateQueueListApi();
-      enableButton(paxId);
-      enableUpdateStatus(paxId);
-      AppDialog.showToastSuccess(msg: value['description']);
-      setRxRequestStatus(Status.COMPLETED);
-    }).onError((error, stackTrace) {
-      setError(error.toString());
-      enableUpdateStatus(paxId);
-      AppDialog.showToastError(msg: 'Unable to update status served! $error');
-      print(error);
-    });
-  }
-
-  void voidQueue(int queueId, String paxId) {
-    disableUpdateStatus(paxId);
-    _api.addStatusQueue(queueId, '7').then((value) async {
-      final number = value['data']['queueNumber'];
-      print('void Queue Number: $number');
-      updateQueueSecondaryWindows();
-      updateQueueListApi();
-      enableButton(paxId);
-      enableUpdateStatus(paxId);
-      AppDialog.showToastSuccess(msg: value['description']);
-      setRxRequestStatus(Status.COMPLETED);
-    }).onError((error, stackTrace) {
-      enableUpdateStatus(paxId);
+    }).onError((error, stackTrace) async {
       setError(error.toString());
       AppDialog.showToastError(
-          msg: 'Unable to update status void Queue! $error');
-      print(error);
+        title: 'Failed!',
+        desc: 'Unable to print queue. Please try again',
+        func: () async {
+          Get.back();
+          await _logApp.writeLog(" Failed print queue API ${error.toString()}");
+          await _logApp.sendSlackLog(branch.value.fullName!,
+              "Failed print queue API ${error.toString()}");
+        },
+      );
     });
   }
 
-  void servedQueueDetail(int queueId) {
-    _api.addStatusQueue(queueId, '4').then((value) async {
-      final number = value['data']['queueNumber'];
-      print('Served Queue Number: $number');
+  Future<void> servedQueue(
+    String queueId,
+    String paxId,
+  ) async {
+    disableUpdateStatus(paxId);
+    _apiQueue.addStatusQueue(queueId, '4').then((value) async {
+      final number = value['data']['queue']['queueNumber'];
 
-      apiQueueDetailList(selectedPageNumber.value);
-      AppDialog.showToastSuccess(msg: value['description']);
+      await AppDialog.showToastSuccess(
+        title: number,
+        desc: 'Status successfully updated to served',
+        func: () async {
+          enableButton(paxId);
+          await enableUpdateStatus(paxId);
+          await updateQueueListApi();
+        },
+      );
+
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) {
       setError(error.toString());
-      AppDialog.showToastError(msg: 'Unable to update status served! $error');
-      print(error);
-    });
-  }
-
-  void voidQueueDetail(int queueId) {
-    _api.addStatusQueue(queueId, '7').then((value) async {
-      final number = value['data']['queueNumber'];
-      print('void Queue Number: $number');
-      updateQueueSecondaryWindows();
-      updateQueueListApi();
-      apiQueueDetailList(selectedPageNumber.value);
-      AppDialog.showToastSuccess(msg: value['description']);
-      setRxRequestStatus(Status.COMPLETED);
-    }).onError((error, stackTrace) {
-      setError(error.toString());
+      enableUpdateStatus(paxId);
       AppDialog.showToastError(
-          msg: 'Unable to update status void Queue! $error');
-      print(error);
+          title: 'Failed!',
+          desc: 'Unable update status served!. Please try again',
+          func: () async {
+            await _logApp.writeLog(
+                " Failed to update status served queue view API ${error.toString()}");
+            await _logApp.sendSlackLog(branch.value.fullName!,
+                "Failed to update status served queue ${error.toString()}");
+          });
     });
   }
 
-  void callQueue(String paxId, int queueCount) {
-    disableButton(paxId);
-
-    _api.callQueue(paxId).then((value) async {
-      final number = value['data']['queueNumber'];
-      final numberCall = formatQueueNumber(number);
-      updateQueueListApi();
-      if (secondaryWindowIDs.isEmpty) {
-        callSpeakFunction(numberCall, queueCount);
-        onUpdate();
-        updateQueueSecondaryWindows();
-        updateQueueListApi();
-        disableButton(paxId);
-        Timer(Duration(seconds: branch.value.callDelay!), () {
-          enableButton(paxId);
-        });
-
-        AppDialog.showToastSuccess(msg: value['description']);
-        setRxRequestStatus(Status.COMPLETED);
-      } else {
-        callSecondaryWindows(numberCall, queueCount);
-        onUpdate();
-        updateQueueSecondaryWindows();
-        updateQueueListApi();
-        disableButton(paxId);
-        Timer(Duration(seconds: branch.value.callDelay!), () {
-          enableButton(paxId);
-        });
-        AppDialog.showToastSuccess(msg: value['description']);
-        setRxRequestStatus(Status.COMPLETED);
+  Future<void> voidQueue(
+    String queueId,
+    String paxId,
+  ) async {
+    disableUpdateStatus(paxId);
+    _apiQueue.addStatusQueue(queueId, '7').then((value) async {
+      final number = value['data']['queue']['queueNumber'];
+      if (kDebugMode) {
+        print('void Queue Number: $number');
       }
-    }).onError((error, stackTrace) {
+
+      await AppDialog.showToastSuccess(
+        title: number,
+        desc: 'Status successfully updated to void',
+        func: () async {
+          await updateQueueListApi();
+        },
+      );
+
       enableButton(paxId);
+      await enableUpdateStatus(paxId);
+      setRxRequestStatus(Status.COMPLETED);
+    }).onError((error, stackTrace) {
+      enableUpdateStatus(paxId);
       setError(error.toString());
-      AppDialog.showToastError(msg: 'Unable to calling Queue! $error');
-      print(error);
+      AppDialog.showToastError(
+          title: 'Failed!',
+          desc: 'Unable update status void!. Please try again',
+          func: () async {
+            await _logApp.writeLog(
+                " Failed to update status void queue view API ${error.toString()}");
+            await _logApp.sendSlackLog(branch.value.fullName!,
+                "Failed to update status void queue view API ${error.toString()}");
+          });
     });
   }
 
-  void resetQueue() {
-    Get.back();
+  Future<void> servedQueueWithhold(
+    String queueId,
+  ) async {
     AppDialog.showDialogLoading();
-    _api.reset().then((value) async {
-      AppDialog.showToastSuccess(msg: 'Queue reset successfully.');
-      updateQueueSecondaryWindows();
-      updateQueueListApi();
+    _apiQueue.addStatusQueue(queueId, '4').then((value) async {
       Get.back();
+      final number = value['data']['queue']['queueNumber'];
+      await AppDialog.showToastSuccess(
+        title: number,
+        desc: 'Status successfully updated to served',
+        func: () async {
+          await updateQueueListApi();
+        },
+      );
     }).onError((error, stackTrace) {
+      setError(error.toString());
       Get.back();
-      AppDialog.showToastError(msg: 'Unable to reset! $error');
-      print(error);
+      AppDialog.showToastError(
+        title: 'Failed!',
+        desc: 'Unable update status served!. Please try again',
+        func: () async {
+          await _logApp.writeLog(
+              " Failed to update status served queue Withold API ${error.toString()}");
+        },
+      );
     });
   }
 
-  void callSpeakFunction(String text, int queueCount) async {
-    for (int i = 1; i <= branch.value.callRepeat!; i++) {
-      await speak(text, queueCount);
-      await Future.delayed(const Duration(seconds: 3));
+  Future<void> voidQueueWithhold(
+    String queueId,
+  ) async {
+    AppDialog.showDialogLoading();
+    _apiQueue.addStatusQueue(queueId, '7').then((value) async {
+      Get.back();
+      final number = value['data']['queue']['queueNumber'];
+      if (kDebugMode) {
+        print('void Queue Number: $number');
+      }
+      await AppDialog.showToastSuccess(
+          title: number,
+          desc: 'Status successfully updated to void',
+          func: () async {
+            await updateQueueListApi();
+          });
+    }).onError((error, stackTrace) {
+      Get.back();
+      setError(error.toString());
+      AppDialog.showToastError(
+        title: 'Failed!',
+        desc: 'Unable update status void!. Please try again',
+        func: () async {
+          await _logApp.writeLog(
+              " Failed to update status void queue withhold API ${error.toString()}");
+        },
+      );
+    });
+  }
+
+  Future<void> updateQtyQueue(
+    String queueId,
+    String qty,
+  ) async {
+    AppDialog.showDialogLoading();
+    _apiQueue.updateQty(queueId, qty).then((value) async {
+      Get.back();
+      final number = value['data']['queue']['queueNumber'];
+      await AppDialog.showToastSuccess(
+          title: number,
+          desc: 'Quantity successfully updated to $qty',
+          func: () async {
+            await apiQueueDetailList();
+            await updateQueueListApi();
+          });
+    }).onError((error, stackTrace) {
+      setError(error.toString());
+      Get.back();
+      AppDialog.showToastError(
+        title: 'Failed!',
+        desc: 'Unable update quantity!. Please try again',
+        func: () async {
+          await _logApp
+              .writeLog(" Failed to update qty queue API ${error.toString()}");
+          await _logApp.sendSlackLog(branch.value.fullName!,
+              "Failed to update qty queue API ${error.toString()}");
+        },
+      );
+    });
+  }
+
+  Future<void> servedQueueDetail(
+    String queueId,
+  ) async {
+    AppDialog.showDialogLoading();
+    _apiQueue.addStatusQueue(queueId, '4').then((value) async {
+      Get.back();
+      final number = value['data']['queue']['queueNumber'];
+      await AppDialog.showToastSuccess(
+          title: number,
+          desc: 'Status successfully updated to served',
+          func: () async {
+            await apiQueueDetailList();
+            await updateQueueListApi();
+          });
+    }).onError((error, stackTrace) {
+      setError(error.toString());
+      Get.back();
+      AppDialog.showToastError(
+        title: 'Failed!',
+        desc: 'Unable update status served!. Please try again',
+        func: () async {
+          await _logApp.writeLog(
+              " Failed to update status served queue detail API ${error.toString()}");
+          await _logApp.sendSlackLog(branch.value.fullName!,
+              "Failed to update status served queue detail API ${error.toString()}");
+        },
+      );
+    });
+  }
+
+  Future<void> voidQueueDetail(
+    String queueId,
+  ) async {
+    AppDialog.showDialogLoading();
+    _apiQueue.addStatusQueue(queueId, '7').then((value) async {
+      Get.back();
+      final number = value['data']['queue']['queueNumber'];
+      if (kDebugMode) {
+        print('void Queue Number: $number');
+      }
+      await AppDialog.showToastSuccess(
+          title: number,
+          desc: 'Status successfully updated to void',
+          func: () async {
+            await apiQueueDetailList();
+            await updateQueueListApi();
+          });
+    }).onError((error, stackTrace) {
+      Get.back();
+      setError(error.toString());
+      AppDialog.showToastError(
+        title: 'Failed!',
+        desc: 'Unable update status void!. Please try again',
+        func: () async {
+          await _logApp.writeLog(
+              " Failed to update status void queue detail API ${error.toString()}");
+          await _logApp.sendSlackLog(branch.value.fullName!,
+              "Failed to update status void queue detail API  ${error.toString()}");
+        },
+      );
+    });
+  }
+
+  Future<void> callQueue(
+    String paxId,
+    int queueCount,
+  ) async {
+    disableButton(paxId);
+    _apiQueue.callQueue(paxId).then((value) async {
+      controllerCountdDown.start();
+      final queueNumberCall = value['data']['queue']['queueNumber'];
+      final number = separateNumbers(queueNumberCall);
+      final letters = separateLetters(queueNumberCall);
+      Timer(Duration(seconds: branch.value.callDelay!), () {
+        enableButton(paxId);
+      });
+      if (secondaryWindowIDs.isEmpty) {
+        AppDialog.showToastSuccess(
+            title: queueNumberCall,
+            desc: 'Queue $queueNumberCall called succesfuly',
+            func: () async {
+              await updateQueueListApi();
+            });
+        await callSpeakFunction(letters, number, queueCount);
+
+        setRxRequestStatus(Status.COMPLETED);
+      } else {
+        await callSecondaryWindows(queueNumberCall, queueCount);
+
+        await AppDialog.showToastSuccess(
+          title: queueNumberCall,
+          desc: 'Queue $queueNumberCall called succesfuly',
+          func: () async {
+            await updateQueueListApi();
+          },
+        );
+        setRxRequestStatus(Status.COMPLETED);
+      }
+    }).onError((error, stackTrace) {
+      enableButton(paxId);
+      setError(error.toString());
+      AppDialog.showToastError(
+        title: 'Failed!',
+        desc: 'Unable to call or maybe the queue is already canceled',
+        func: () async {
+          await updateQueueListApi();
+
+          await _logApp
+              .writeLog(" Failed to call queue detail API ${error.toString()}");
+          await _logApp.sendSlackLog(branch.value.fullName!,
+              "Failed to call queue detail API ${error.toString()}");
+        },
+      );
+    });
+  }
+
+  Future<void> callSpeakFunction(
+      String letters, String number, int queueCount) async {
+    int repeatCount = branch.value.callRepeat! + 1;
+    for (int i = 1; i <= repeatCount; i++) {
+      await speak(letters, number, queueCount);
+      await Future.delayed(const Duration(seconds: 13));
     }
   }
 
-  Future<void> speak(String text, int queueCount) async {
-    List<dynamic> languages = await flutterTts.getLanguages;
-    if (languages.contains('id-ID')) {
-      await flutterTts.setLanguage('id-ID');
-    } else {
-      await flutterTts.setLanguage('en-US');
-    }
-    await flutterTts.setPitch(1.0);
-    await flutterTts.setVolume(100);
-    await flutterTts.setSpeechRate(0.5);
-    final audio = AudioPlayer();
-    await audio.play(AssetSource('sounds/attention.mp3'));
-    await audio.onPlayerComplete.first;
-    if (languages.contains('id-ID')) {
+  Future<void> speak(String letters, String number, int queueCount) async {
+    int digitCount = getDigitCount(number);
+    if (digitCount < 3) {
       if (queueCount == (branch.value.callCount! - 1)) {
-        final textSpeak = 'Panggilan Terakhir! Antrian Nomor! $text !';
-        await flutterTts.speak(textSpeak);
+        await audioPlayer.playPlaylist([
+          'assets/sounds/attention.wav',
+          'assets/sounds/lastcall.wav',
+          'assets/sounds/alphabet/$letters.wav',
+          'assets/sounds/number/$number.wav',
+          'assets/sounds/already.wav',
+        ]);
       } else {
-        final textSpeak = 'Antrian Nomor! $text!';
-        await flutterTts.speak(textSpeak);
+        await audioPlayer.playPlaylist([
+          'assets/sounds/attention.wav',
+          'assets/sounds/calling.wav',
+          'assets/sounds/alphabet/$letters.wav',
+          'assets/sounds/number/$number.wav',
+          'assets/sounds/already.wav',
+        ]);
+      }
+    } else if (digitCount == 3) {
+      int firstDigit = getFirstDigit(int.parse(number));
+      int secondDigit = getSecondDigit(int.parse(number));
+      int thirdDigit = getThirdDigit(int.parse(number));
+      if (queueCount == (branch.value.callCount! - 1)) {
+        await audioPlayer.playPlaylist([
+          'assets/sounds/attention.wav',
+          'assets/sounds/lastcall.wav',
+          'assets/sounds/number/$firstDigit.wav',
+          'assets/sounds/number/$secondDigit.wav',
+          'assets/sounds/number/$thirdDigit.wav',
+          'assets/sounds/already.wav',
+        ]);
+      } else {
+        await audioPlayer.playPlaylist([
+          'assets/sounds/attention.wav',
+          'assets/sounds/calling.wav',
+          'assets/sounds/number/$firstDigit.wav',
+          'assets/sounds/number/$secondDigit.wav',
+          'assets/sounds/number/$thirdDigit.wav',
+          'assets/sounds/already.wav',
+        ]);
       }
     } else {
-      if (queueCount == branch.value.callCount! - 1) {
-        final textSpeak = 'Last Call! Queue Number! $text !';
-        await flutterTts.speak(textSpeak);
-      } else {
-        final textSpeak = 'Queue Number! $text!';
-        await flutterTts.speak(textSpeak);
-      }
+      AppDialog.showToastError(
+          title: 'To much number!',
+          desc: 'The number is too long to call!',
+          func: () async {
+            await _logApp.writeLog(
+                " Failed to update status served queue detail API ${error.toString()}");
+          });
     }
   }
 
-  void onItemSelected(String? value, int queueId, String paxId) {
+  void onItemSelected(
+    String? value,
+    String queueId,
+    String paxId,
+  ) {
     if (value == 'served') {
       AppDialog.confirmationMsg(
         title: "Served Queue",
-        message: "Are you sure want to served this queue?",
-        function: () {
-          servedQueue(queueId, paxId);
+        message: "Are you sure you want to update the status to 'Served'?",
+        function: () async {
+          await servedQueue(queueId, paxId);
           Get.back();
         },
         aksiText: "Ok",
@@ -650,10 +972,37 @@ class AdminController extends GetxController {
     } else if (value == 'void') {
       AppDialog.confirmationMsg(
         title: "Void Queue",
-        message: "Are you sure want to void this queue?",
-        function: () {
-          voidQueue(queueId, paxId);
+        message: "Are you sure you want to update the status to 'Void'?",
+        function: () async {
+          await voidQueue(queueId, paxId);
           Get.back();
+        },
+        aksiText: "Ok",
+      );
+    }
+  }
+
+  void onItemWitWithholdSelected(
+    String? value,
+    String queueId,
+  ) {
+    if (value == 'served') {
+      AppDialog.confirmationMsg(
+        title: "Served Queue",
+        message: "Are you sure you want to update the status to 'Served'?",
+        function: () async {
+          Get.back();
+          await servedQueueWithhold(queueId);
+        },
+        aksiText: "Ok",
+      );
+    } else if (value == 'void') {
+      AppDialog.confirmationMsg(
+        title: "Void Queue",
+        message: "Are you sure you want to update the status to 'Void'?",
+        function: () async {
+          Get.back();
+          await voidQueueWithhold(queueId);
         },
         aksiText: "Ok",
       );
@@ -667,204 +1016,46 @@ class AdminController extends GetxController {
     return '$firstCharacter ' '${numberParse.toString()}';
   }
 
-  Future<Uint8List> generatePdf(PdfPageFormat format) async {
-    final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
-    final font = await PdfGoogleFonts.poppinsBold();
-    final qrCodeImage = await QrPainter(
-      data: 'google.com',
-      version: QrVersions.auto,
-      gapless: false,
-    ).toImage(100);
-    final qrCodeBytes =
-        await qrCodeImage.toByteData(format: ImageByteFormat.png);
-    pdf.addPage(
-      pw.Page(
-        pageFormat: format,
-        build: (context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(10),
-            child: pw.Column(
-              mainAxisAlignment: pw.MainAxisAlignment.start,
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Text(
-                  branch.value.fullName!,
-                  style: pw.TextStyle(
-                    font: font,
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 15),
-                pw.Image(
-                  pw.MemoryImage(qrCodeBytes!.buffer.asUint8List()),
-                  width: 100,
-                  height: 100,
-                ),
-                pw.SizedBox(height: 5),
-                pw.Text(
-                  ' A001',
-                  style: pw.TextStyle(
-                    font: font,
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 5),
-                pw.Text(
-                  'Scan the QR code above to check your queue status.',
-                  style: const pw.TextStyle(
-                    fontSize: 12,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 5),
-                pw.Text(
-                  'Cancellation Code: ',
-                  style: const pw.TextStyle(
-                    fontSize: 12,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.Text(
-                  'AKWFA11',
-                  style: pw.TextStyle(
-                    font: font,
-                    fontSize: 12,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'Thank you for visiting!',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 15),
-                pw.Text(
-                  '*This alpha-version is not complete and may or may not change further',
-                  style: pw.TextStyle(
-                    fontSize: 8,
-                    fontStyle: pw.FontStyle.italic,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-    return pdf.save();
+  String separateLetters(String input) {
+    return input.replaceAll(RegExp(r'\d+'), '');
   }
 
-  Future<void> printQr(
-    String queueNumber,
-    String cancelCode,
-    String qrData,
-  ) async {
-    final pdf = pw.Document(version: PdfVersion.pdf_1_5, compress: true);
-    final font = await PdfGoogleFonts.poppinsBold();
-    final qrCodeImage = await QrPainter(
-      data: qrData,
-      version: QrVersions.auto,
-      gapless: true,
-    ).toImage(100);
-    final qrCodeBytes =
-        await qrCodeImage.toByteData(format: ImageByteFormat.png);
+  String separateNumbers(String input) {
+    String numbers = input.replaceAll(RegExp(r'[A-Za-z]+'), '');
+    return int.parse(numbers).toString();
+  }
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.roll57,
-        orientation: pw.PageOrientation.portrait,
-        build: (context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(10),
-            child: pw.Column(
-              mainAxisAlignment: pw.MainAxisAlignment.start,
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Text(
-                  branch.value.fullName!,
-                  style: pw.TextStyle(
-                    font: font,
-                    fontSize: 14,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 14),
-                pw.Image(
-                  pw.MemoryImage(qrCodeBytes!.buffer.asUint8List()),
-                  width: 100,
-                  height: 100,
-                ),
-                pw.SizedBox(height: 5),
-                pw.Text(
-                  queueNumber,
-                  style: pw.TextStyle(
-                    font: font,
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 5),
-                pw.Text(
-                  'Scan the QR code above to check your queue status.',
-                  style: const pw.TextStyle(
-                    fontSize: 10,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 5),
-                pw.Text(
-                  'Cancellation Code: ',
-                  style: const pw.TextStyle(
-                    fontSize: 10,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.Text(
-                  cancelCode,
-                  style: pw.TextStyle(
-                    font: font,
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 12),
-                pw.Text(
-                  'Thank you for visiting!',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 15),
-                pw.Text(
-                  '*This alpha-version is not complete and may or may not change further',
-                  style: pw.TextStyle(
-                    fontSize: 7,
-                    fontStyle: pw.FontStyle.italic,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+  int getFirstDigit(int value) {
+    return value ~/ 100;
+  }
 
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-    );
+  int getSecondDigit(int value) {
+    return (value ~/ 10) % 10;
+  }
+
+  int getThirdDigit(int value) {
+    return value % 10;
+  }
+
+  int getDigitCount(String value) {
+    return value.length;
+  }
+
+  void changeVisibleWithold() {
+    withHoldVisible.value = !withHoldVisible.value;
+  }
+
+  String formatTimeDifference(DateTime dateTime) {
+    Duration diff = DateTime.now().difference(dateTime);
+
+    int days = diff.inDays;
+    int hours = diff.inHours % 24;
+    int minutes = diff.inMinutes % 60;
+
+    String daysStr = days > 0 ? '$days d ' : '';
+    String hoursStr = hours > 0 ? '$hours h ' : '';
+    String minutesStr = minutes > 0 ? '$minutes m' : '';
+
+    return '$daysStr$hoursStr$minutesStr'.trim();
   }
 }

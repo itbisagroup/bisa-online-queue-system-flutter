@@ -7,8 +7,8 @@ abstract class Routes {
   static const home = _Paths.home;
   static const customer = _Paths.customer;
   static const printer = _Paths.printer;
-  static const voidScreen = _Paths.voidScreen;
-
+  static const shift = _Paths.shift;
+  static const config = _Paths.config;
 }
 
 abstract class _Paths {
@@ -18,7 +18,6 @@ abstract class _Paths {
   static const home = '/home';
   static const customer = '/customer';
   static const printer = '/printer';
-  static const voidScreen = '/voidscreen';
-
-
+  static const shift = '/shift';
+  static const config = '/config';
 }

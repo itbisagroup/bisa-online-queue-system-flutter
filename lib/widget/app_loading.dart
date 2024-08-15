@@ -16,7 +16,7 @@ class AppLoading extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Image.asset('assets/images/loading.gif'),
-              const AppText(text: 'In a seconds',fontSize: 24,color: AppColors.blackCalm,fontWeight: FontWeight.bold,)
+              const AppText(text: 'in a second',fontSize: 24,color: AppColors.blackCalm,fontWeight: FontWeight.bold,)
             ],
           ),
         ),

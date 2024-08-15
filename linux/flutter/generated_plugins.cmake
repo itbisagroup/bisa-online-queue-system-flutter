@@ -3,16 +3,16 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  audioplayers_linux
   desktop_multi_window
+  desktop_window
   flutter_secure_storage_linux
-  media_kit_libs_linux
-  media_kit_video
-  printing
+  flutter_window_close
+  rive_common
+  screen_retriever
+  window_manager
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
-  media_kit_native_event_loop
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

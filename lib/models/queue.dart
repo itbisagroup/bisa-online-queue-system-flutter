@@ -1,69 +1,91 @@
-class Queue {
-  final String? uuid;
+import 'package:queue_system/models/pax.dart';
 
-   String? queueNumber;
-   int? queueId;
-   int? waitingCount;
-   int? callCount;
+class Queue {
+  final String? id;
+  final String? queueCode; 
+  final String? queueNumber;
+  final int? queueQty;  // Updated field name
+  final int? waitingCount;
+  final int? printCount;  // New field
+  final int? callCount;
+  final DateTime? createdDate;
+
 
   Queue({
-    this.uuid,
+    this.id,
+    this.queueCode,
     this.queueNumber,
-    this.queueId,
+    this.queueQty,
     this.waitingCount,
+    this.printCount,
     this.callCount,
+    this.createdDate,
+
   });
 
   factory Queue.fromJson(Map<String, dynamic> json) {
-    final String uuid = json.keys.first;
-    final Map<String, dynamic>? queueData = json[uuid];
-    final String? queueNumber = queueData?['queueNumber'] ?? "0000";
-    final int? queueId = queueData?['queueId'] ?? 0;
-    final int? waitingCount = queueData?['waitingCount'] ?? 0;
-    final int? callCount = queueData?['callCount'] ?? 0;
-
+    final String id = json.keys.first;
+    final Map<String, dynamic>? queueData = json[id];
     return Queue(
-      uuid: uuid,
-      queueNumber: queueNumber,
-      queueId: queueId,
-      waitingCount: waitingCount,
-      callCount: callCount,
+      id: id,
+      queueCode: queueData?['queueCode'] ?? "0000",
+      queueNumber: queueData?['queueNumber'] ?? "0000",
+      queueQty: queueData?['queueQty'] ?? 0,
+      waitingCount: queueData?['waitingCount']?? 0,
+      printCount: queueData?['printCount']?? 0,
+      callCount: queueData?['callCount']?? 0,
+      createdDate: DateTime.parse( queueData?['createdAt']['date']??'0000-00-00'),
+
     );
   }
 }
 
-class PaxWithQueue {
-  final Pax? pax;
-  final Queue? queue;
+class Withhold {
+  final String? id;
+  String? queueNumber;
+  String? queueCode;
+  int? callCount;
+  int? queueQty;
 
-  PaxWithQueue({
-    this.pax,
-    this.queue,
+  Withhold({
+    this.id,
+    this.queueNumber,
+    this.queueCode,
+    this.callCount,
+    this.queueQty,
   });
 
+  factory Withhold.fromJson(Map<String, dynamic> json) {
+    final String id = json.keys.first;
+    final List<dynamic>? queueDataList = json[id];
+    if (queueDataList != null && queueDataList.isNotEmpty) {
+      final Map<String, dynamic> queueData = queueDataList.first;
+      final String? queueNumber = queueData['queueNumber'];
+      final String? queueCode = queueData['id'];
+      final int? callCount = queueData['callCount'];
+      final int? queueQty = queueData['queueQty'];
 
-}
-
-class Pax {
-  final String? uuid;
-  final String? notation;
-  final String? variety;
-  final String? description;
-
-  Pax({
-    this.uuid,
-    this.notation,
-    this.variety,
-    this.description,
-  });
-
-  factory Pax.fromJson(Map<String, dynamic> json) {
-    return Pax(
-      uuid: json['uuid'],
-      notation: json['notation'],
-      variety: json['variety'],
-      description: json['description'],
-    );
+      return Withhold(
+        id: id,
+        queueNumber: queueNumber,
+        queueCode: queueCode,
+        callCount: callCount,
+        queueQty: queueQty,
+      );
+    } else {
+      final String id = json.keys.first;
+      const String queueNumber = "0000";
+      const String queueCode = '0';
+      const int callCount = 0;
+      const int queueQty = 0;
+      return Withhold(
+        id: id,
+        queueNumber: queueNumber,
+        queueCode: queueCode,
+        callCount: callCount,
+        queueQty: queueQty,
+      );
+    }
   }
 }
 
@@ -90,158 +112,14 @@ class StatusQueue {
   }
 }
 
-class Branch {
-  final int? id;
-  final String? slug;
-  final String? codeName;
-  final String? fullName;
-  final String? address;
-  final String? city;
-  final String? province;
-  final String? country;
-  final String? emailAddress;
-  final int? queueCount;
-  final int? callCount;
-  final int? callRepeat;
-  final int? callDelay;
-  final bool? playAds;
-  final Brand? brand;
-  final IsActive? isActive;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-  final dynamic deletedAt;
-  final List<Pax>? pax;
-  final List<Ads>? ads;
+class PaxWithQueue {
+  final Pax? pax;
+  final Queue? queue;
+  final Withhold? withhold;
 
-  Branch({
-    this.id,
-    this.slug,
-    this.codeName,
-    this.fullName,
-    this.address,
-    this.city,
-    this.province,
-    this.country,
-    this.emailAddress,
-    this.queueCount,
-    this.callCount,
-    this.callRepeat,
-    this.callDelay,
-    this.playAds,
-    this.brand,
-    this.isActive,
-    this.createdAt,
-    this.updatedAt,
-    this.deletedAt,
+  PaxWithQueue({
     this.pax,
-    this.ads,
+    this.queue,
+    this.withhold,
   });
-
-  factory Branch.fromJson(Map<String, dynamic> json) {
-    return Branch(
-      id: json['data']['branch']['id'],
-      slug: json['data']['branch']['slug'],
-      codeName: json['data']['branch']['codeName'],
-      fullName: json['data']['branch']['fullName'],
-      address: json['data']['branch']['address'],
-      city: json['data']['branch']['city'],
-      province: json['data']['branch']['province'],
-      country: json['data']['branch']['country'],
-      emailAddress: json['data']['branch']['emailAddress'],
-      queueCount: json['data']['branch']['queueCount'],
-      callCount: json['data']['branch']['callCount'],
-      callRepeat: json['data']['branch']['callRepeat'],
-      callDelay: json['data']['branch']['callDelay'],
-      playAds: json['data']['branch']['playAds'],
-      brand: Brand.fromJson(json['data']['branch']['brand']),
-      isActive: IsActive.fromJson(json['data']['branch']['isActive']),
-      createdAt: DateTime.parse(json['data']['branch']['createdAt']['date']),
-      updatedAt: DateTime.parse(json['data']['branch']['updatedAt']['date']),
-      deletedAt: json['data']['branch']['deletedAt'],
-      pax: (json['data']['pax'] as List<dynamic>?)
-          ?.map((e) => Pax.fromJson(e))
-          .toList(),
-      ads: (json['data']['ads'] as List<dynamic>?)
-          ?.map((e) => Ads.fromJson(e))
-          .toList(),
-    );
-  }
-}
-
-class Brand {
-  final int? id;
-  final String? slug;
-  final String? codeName;
-  final String? fullName;
-  final String? logo;
-  final IsActive? isActive;
-
-  Brand({
-    this.id,
-    this.slug,
-    this.codeName,
-    this.logo,
-    this.fullName,
-    this.isActive,
-  });
-
-  factory Brand.fromJson(Map<String, dynamic> json) {
-    return Brand(
-      id: json['id'],
-      slug: json['slug'],
-      codeName: json['codeName'],
-      fullName: json['fullName'],
-      logo: json['logo'],
-      isActive: IsActive.fromJson(json['isActive']),
-    );
-  }
-}
-
-class IsActive {
-  final int? value;
-  final String? label;
-  final String? icon;
-  final String? color;
-
-  IsActive({
-    this.value,
-    this.label,
-    this.icon,
-    this.color,
-  });
-
-  factory IsActive.fromJson(Map<String, dynamic> json) {
-    return IsActive(
-      value: json['value'],
-      label: json['label'],
-      icon: json['icon'],
-      color: json['color'],
-    );
-  }
-}
-
-class Ads {
-  final String? sequence;
-  final String? uuid;
-  final String? title;
-  final String? description;
-  final String? content;
-
-  Ads({
-    this.sequence,
-    this.uuid,
-    this.title,
-    this.description,
-    this.content,
-  });
-
-  factory Ads.fromJson(Map<String, dynamic> json) {
-    return Ads(
-      sequence: json['sequence'],
-      uuid: json['uuid'],
-      title: json['title'],
-      description: json['description'],
-      content: json['content'],
-    );
-  }
 }

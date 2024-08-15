@@ -31,31 +31,42 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  flutter_dotenv: ^5.1.0
   http: ^1.2.1
   get: ^4.6.6
   font_awesome_flutter: ^10.7.0
-  media_kit: ^1.1.10   
-  media_kit_video: ^1.2.4                     
-  media_kit_libs_video: ^1.0.4
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^9.2.2
   path_provider: ^2.1.3
-  fluttertoast: ^8.2.5
-  audioplayers: ^6.0.0
-  flutter_inset_box_shadow: ^1.0.8 
+  flutter_inset_shadow: ^2.0.3
   sizer: ^2.0.15
-  flutter_tts: ^4.0.2
   intl: ^0.19.0
-  printing: ^5.12.0
-  qr_flutter: ^4.1.0
   number_pagination: ^1.0.6
   desktop_multi_window: ^0.2.0
   animated_text_kit: ^4.2.2
+  awesome_dialog: ^3.2.1
+  flutter_esc_pos_utils: ^1.0.1
+  thermal_printer: ^1.0.5
+  video_player_win: ^2.3.9
+  video_player: ^2.8.6
+  win32: ^5.5.0
+  flutter_sticky_header: ^0.6.5
+  cron: ^0.6.1
+  flutter_window_close: ^1.0.0
+  circular_countdown_timer: ^0.2.3
+  window_manager: ^0.3.9
+  desktop_window: ^0.4.0
+  fl_chart: ^0.68.0
+  video_player_control_panel: ^1.1.1
+  slack_logger: ^1.0.7
+  cached_network_image: ^3.4.1
+
+
+  
   
 dev_dependencies:
   flutter_lints: ^2.0.0
   flutter_test:
     sdk: flutter
+    
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -68,13 +79,141 @@ flutter:
   uses-material-design: true
   # To add assets to your application, add an assets section, like this:
   assets:
-     - assets/images/logo.webp
      - assets/images/nointernet.webp
-     - assets/sounds/attention.mp3
+     - assets/images/novideo.webp
+     - assets/sounds/attention.wav
+     - assets/sounds/already.wav
+     - assets/sounds/lastcall.wav
+     - assets/sounds/calling.wav
      - assets/images/loading.gif
-     - assets/images/bisagroup.png
-     - assets/images/noads.gif
-     - .env
+     - assets/images/notif.gif
+     - assets/images/logo.png
+     - assets/sounds/number/0.wav
+     - assets/sounds/number/1.wav
+     - assets/sounds/number/2.wav
+     - assets/sounds/number/3.wav
+     - assets/sounds/number/4.wav
+     - assets/sounds/number/5.wav
+     - assets/sounds/number/6.wav
+     - assets/sounds/number/7.wav
+     - assets/sounds/number/8.wav
+     - assets/sounds/number/9.wav
+     - assets/sounds/number/10.wav
+     - assets/sounds/number/11.wav
+     - assets/sounds/number/12.wav
+     - assets/sounds/number/13.wav
+     - assets/sounds/number/14.wav
+     - assets/sounds/number/15.wav
+     - assets/sounds/number/16.wav
+     - assets/sounds/number/17.wav
+     - assets/sounds/number/18.wav
+     - assets/sounds/number/19.wav
+     - assets/sounds/number/20.wav
+     - assets/sounds/number/21.wav
+     - assets/sounds/number/22.wav
+     - assets/sounds/number/23.wav
+     - assets/sounds/number/24.wav
+     - assets/sounds/number/25.wav
+     - assets/sounds/number/26.wav
+     - assets/sounds/number/27.wav
+     - assets/sounds/number/28.wav
+     - assets/sounds/number/29.wav
+     - assets/sounds/number/30.wav
+     - assets/sounds/number/31.wav
+     - assets/sounds/number/32.wav
+     - assets/sounds/number/33.wav
+     - assets/sounds/number/34.wav
+     - assets/sounds/number/35.wav
+     - assets/sounds/number/36.wav
+     - assets/sounds/number/37.wav
+     - assets/sounds/number/38.wav
+     - assets/sounds/number/39.wav
+     - assets/sounds/number/40.wav
+     - assets/sounds/number/41.wav
+     - assets/sounds/number/42.wav
+     - assets/sounds/number/43.wav
+     - assets/sounds/number/44.wav
+     - assets/sounds/number/45.wav
+     - assets/sounds/number/46.wav
+     - assets/sounds/number/47.wav
+     - assets/sounds/number/48.wav
+     - assets/sounds/number/49.wav
+     - assets/sounds/number/50.wav
+     - assets/sounds/number/51.wav
+     - assets/sounds/number/52.wav
+     - assets/sounds/number/53.wav
+     - assets/sounds/number/54.wav
+     - assets/sounds/number/55.wav
+     - assets/sounds/number/56.wav
+     - assets/sounds/number/57.wav
+     - assets/sounds/number/58.wav
+     - assets/sounds/number/59.wav
+     - assets/sounds/number/60.wav
+     - assets/sounds/number/61.wav
+     - assets/sounds/number/62.wav
+     - assets/sounds/number/63.wav
+     - assets/sounds/number/64.wav
+     - assets/sounds/number/65.wav
+     - assets/sounds/number/66.wav
+     - assets/sounds/number/67.wav
+     - assets/sounds/number/68.wav
+     - assets/sounds/number/69.wav
+     - assets/sounds/number/70.wav
+     - assets/sounds/number/71.wav
+     - assets/sounds/number/72.wav
+     - assets/sounds/number/73.wav
+     - assets/sounds/number/74.wav
+     - assets/sounds/number/75.wav
+     - assets/sounds/number/76.wav
+     - assets/sounds/number/77.wav
+     - assets/sounds/number/78.wav
+     - assets/sounds/number/79.wav
+     - assets/sounds/number/80.wav
+     - assets/sounds/number/81.wav
+     - assets/sounds/number/82.wav
+     - assets/sounds/number/83.wav
+     - assets/sounds/number/84.wav
+     - assets/sounds/number/85.wav
+     - assets/sounds/number/86.wav
+     - assets/sounds/number/87.wav
+     - assets/sounds/number/88.wav
+     - assets/sounds/number/89.wav
+     - assets/sounds/number/90.wav
+     - assets/sounds/number/91.wav
+     - assets/sounds/number/92.wav
+     - assets/sounds/number/93.wav
+     - assets/sounds/number/94.wav
+     - assets/sounds/number/95.wav
+     - assets/sounds/number/96.wav
+     - assets/sounds/number/97.wav
+     - assets/sounds/number/98.wav
+     - assets/sounds/number/99.wav
+     - assets/sounds/alphabet/A.wav
+     - assets/sounds/alphabet/B.wav
+     - assets/sounds/alphabet/C.wav
+     - assets/sounds/alphabet/D.wav
+     - assets/sounds/alphabet/E.wav
+     - assets/sounds/alphabet/F.wav
+     - assets/sounds/alphabet/G.wav
+     - assets/sounds/alphabet/H.wav
+     - assets/sounds/alphabet/I.wav
+     - assets/sounds/alphabet/J.wav
+     - assets/sounds/alphabet/K.wav
+     - assets/sounds/alphabet/L.wav
+     - assets/sounds/alphabet/M.wav
+     - assets/sounds/alphabet/N.wav
+     - assets/sounds/alphabet/O.wav
+     - assets/sounds/alphabet/P.wav
+     - assets/sounds/alphabet/Q.wav
+     - assets/sounds/alphabet/R.wav
+     - assets/sounds/alphabet/S.wav
+     - assets/sounds/alphabet/T.wav
+     - assets/sounds/alphabet/U.wav
+     - assets/sounds/alphabet/V.wav
+     - assets/sounds/alphabet/W.wav
+     - assets/sounds/alphabet/X.wav
+     - assets/sounds/alphabet/Y.wav
+     - assets/sounds/alphabet/Z.wav
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
@@ -87,17 +226,17 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 600
+    - family: Madelin
+      fonts:
+        - asset: assets/fonts/Madelin-Bold.ttf
+          weight: 700
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages

@@ -27,8 +27,8 @@ class TitleText extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontFamily: 'poppins',
         fontWeight: fontWeight,
+        fontFamily: 'Madelin',
         fontSize: fontSize,
         letterSpacing: 1,
         wordSpacing: 1,
@@ -76,9 +76,9 @@ class AppText extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontFamily: 'poppins',
         fontWeight: fontWeight,
         fontSize: fontSize,
+        fontFamily: 'Poppins',
         letterSpacing: 1,
         wordSpacing: 1,
         color: color,

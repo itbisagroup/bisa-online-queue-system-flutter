@@ -1,32 +1,42 @@
-class AppExceptions implements Exception{
-  final _message ;
-  final _prefix ;
+class AppExceptions implements Exception {
+  final dynamic message;
+  final dynamic prefix;
 
-  AppExceptions([this._message,this._prefix]);
+  AppExceptions([this.message, this.prefix]);
 
-  String toString(){
-    return '$_prefix$_message';
+  @override
+  String toString() {
+    return '$prefix$message';
   }
-
 }
 
-class InternetException extends AppExceptions{
-  InternetException([String? message]) :super(message,'No Internet');
-}
-class RequestTimeOut extends AppExceptions{
-  RequestTimeOut([String? message]) :super(message,'Request Time Out');
-}
-class ServerException extends AppExceptions{
-  ServerException([String? message]) :super(message,'Internal Server Error');
-}
-class InvalidUrlException extends AppExceptions{
-  InvalidUrlException([String? message]) :super(message,'');
-}
-class UnautorizedException extends AppExceptions{
-  
-  UnautorizedException([String? message]) :super(message,'Unautorized');
-}
-class FetchDataException extends AppExceptions{
-  FetchDataException([String? message]) :super(message,'');
+class InternetException extends AppExceptions {
+  InternetException([String? message]) : super(message, 'No Internet');
 }
 
+class RequestTimeOut extends AppExceptions {
+  RequestTimeOut([String? message]) : super(message, 'Request Timed Out');
+}
+
+class ServerException extends AppExceptions {
+  ServerException([String? message]) : super(message, 'Internal Server Error');
+}
+
+class InvalidUrlException extends AppExceptions {
+  InvalidUrlException([String? message]) : super(message, '');
+}
+
+class UnautorizedException extends AppExceptions {
+  UnautorizedException([String? message]) : super(message, 'Unauthorized');
+}
+
+class ForbidenException extends AppExceptions {
+  ForbidenException([String? message]) : super(message, 'Forbidden');
+}
+class BadGateway extends AppExceptions {
+  BadGateway([String? message]) : super(message, 'Bad Gateway');
+}
+
+class FetchDataException extends AppExceptions {
+  FetchDataException([String? message]) : super(message, '');
+}

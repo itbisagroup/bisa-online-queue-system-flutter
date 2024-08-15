@@ -1,5 +1,6 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+
 import 'package:get/get.dart';
 import 'package:queue_system/utils/constan.dart';
 import 'package:queue_system/widget/app_text.dart';
@@ -18,6 +19,117 @@ class AppDialog {
     );
   }
 
+  static showToastSuccess({
+    required String title,
+    required String desc,
+    required VoidCallback func,
+  }) {
+    AwesomeDialog(
+      context: NavigationService.navigatorKey.currentContext!,
+      closeIcon: const Icon(Icons.close, color: AppColors.grey),
+      autoHide: const Duration(seconds: 2),
+      dialogType: DialogType.success,
+      animType: AnimType.scale,
+      titleTextStyle: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 24,
+      ),
+      descTextStyle: const TextStyle(
+        fontSize: 16,
+      ),
+      title: title,
+      desc: desc,
+      width: 400,
+      onDismissCallback: (type) async {
+        func();
+      },
+    ).show();
+  }
+
+  static showToastError({
+    required String title,
+    required String desc,
+    required VoidCallback func,
+  }) {
+    AwesomeDialog(
+            context: NavigationService.navigatorKey.currentContext!,
+            dialogType: DialogType.error,
+            animType: AnimType.scale,
+            title: title,
+            titleTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+            ),
+            descTextStyle: const TextStyle(
+              fontSize: 16,
+            ),
+            desc: desc,
+            width: 400,
+            onDismissCallback: (type) {
+              func();
+            },
+            btnOkOnPress: () {},
+            btnOkColor: AppColors.maroon)
+        .show();
+  }
+
+  static showToastInfo({
+    required String title,
+    required String desc,
+    required VoidCallback func,
+  }) {
+    AwesomeDialog(
+            context: NavigationService.navigatorKey.currentContext!,
+            dialogType: DialogType.infoReverse,
+            animType: AnimType.scale,
+            title: title,
+            titleTextStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+            ),
+            descTextStyle: const TextStyle(
+              fontSize: 16,
+            ),
+            desc: desc,
+            width: 400,
+            onDismissCallback: (type) {
+              func();
+            },
+            btnOkOnPress: () {},
+            btnOkColor: AppColors.blackCalm)
+        .show();
+  }
+
+  static showToastShiftEnd({
+    required String title,
+    required String desc,
+    required VoidCallback ok,
+  }) {
+    AwesomeDialog(
+      context: NavigationService.navigatorKey.currentContext!,
+      dialogType: DialogType.info,
+      animType: AnimType.scale,
+      autoHide: const Duration(minutes: 1),
+      title: title,
+      titleTextStyle: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 24,
+      ),
+      descTextStyle: const TextStyle(
+        fontSize: 16,
+      ),
+      desc: desc,
+      width: 400,
+      btnCancelText: 'Not Now',
+      btnCancelColor: AppColors.maroon,
+      btnCancelOnPress: () {},
+     
+      btnOkOnPress: () {
+        ok();
+      },
+    ).show();
+  }
+
   static void showDialogMsg({
     required String title,
     required IconData icon,
@@ -31,7 +143,7 @@ class AppDialog {
           canPop: true,
           child: Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Stack(
                 children: [
                   SizedBox(
@@ -48,12 +160,12 @@ class AppDialog {
                             size: 60,
                             color: AppColors.maroon,
                           ),
-                          SizedBox(height: 20),
+                          const SizedBox(height: 20),
                           AppText(
                             text: title,
                             fontSize: 16,
                           ),
-                          SizedBox(height: 30),
+                          const SizedBox(height: 30),
                           SizedBox(
                             width: 200,
                             height: 50,
@@ -63,12 +175,12 @@ class AppDialog {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.refresh,
                                     size: 30,
                                     color: Colors.black,
                                   ),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   AppText(
                                     text: textFunc,
                                     color: Colors.black,
@@ -95,78 +207,6 @@ class AppDialog {
         ),
       ),
       barrierDismissible: true,
-    );
-  }
-
-  static showToastInfo({required String msg}) {
-    var fToast = FToast();
-    fToast.init(Get.overlayContext!);
-
-    fToast.showToast(
-      gravity: ToastGravity.BOTTOM,
-      toastDuration: const Duration(seconds: 2),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 39, 39, 39),
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: AppText(
-          text: msg,
-          maxLines: 3,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: AppColors.white,
-        ),
-      ),
-    );
-  }
-
-  static showToastError({required String msg}) {
-    var fToast = FToast();
-    fToast.init(Get.overlayContext!);
-
-    fToast.showToast(
-      gravity: ToastGravity.BOTTOM,
-      toastDuration: const Duration(seconds: 5),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.maroon,
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: AppText(
-          text: msg,
-          maxLines: 3,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: AppColors.white,
-        ),
-      ),
-    );
-  }
-
-  static showToastSuccess({required String msg}) {
-    var fToast = FToast();
-    fToast.init(Get.overlayContext!);
-
-    fToast.showToast(
-      gravity: ToastGravity.BOTTOM,
-      toastDuration: const Duration(seconds: 5),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.blackCalm,
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: AppText(
-          text: msg,
-          maxLines: 3,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: AppColors.white,
-        ),
-      ),
     );
   }
 
@@ -209,7 +249,7 @@ class AppDialog {
                                 ),
                               ],
                             ),
-                            SizedBox(height: 24),
+                            const SizedBox(height: 24),
                             AppText(
                               text: message,
                               fontSize: 14,
@@ -238,7 +278,7 @@ class AppDialog {
                                         color: AppColors.white),
                                   ),
                                 ),
-                                SizedBox(width: 10),
+                                const SizedBox(width: 10),
                                 SizedBox(
                                   height: 35,
                                   child: MaterialButton(

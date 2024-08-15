@@ -1,22 +1,15 @@
-
 import 'package:queue_system/utils/constan.dart';
 import 'package:queue_system/view_models/controller/auth_controller.dart';
 import 'package:queue_system/widget/app_text.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-class AuthView extends StatefulWidget {
+class AuthView extends GetView<AuthController> {
   const AuthView({super.key});
 
   @override
-  State<AuthView> createState() => _AuthViewState();
-}
-
-class _AuthViewState extends State<AuthView> {
-  final auhtController = Get.put(AuthController());
-
-  @override
   Widget build(BuildContext context) {
+    Get.put(AuthController());
     return Scaffold(
         body: Center(
       child: Card(
@@ -29,49 +22,83 @@ class _AuthViewState extends State<AuthView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Image.asset('assets/images/logo.webp'),
+              Image.asset('assets/images/logo.png', height: 150,width: 150,),
               const AppText(
-                text: 'QUEUE SYSTEM',
+                text: 'BISA ONLINE QUEUE SYSTEM',
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
                 color: AppColors.black,
               ),
               Form(
-                key: auhtController.gKfS,
-                child: TextFormField(
-                  controller: auhtController.keyController,
-                  style: const TextStyle(
-                    fontFamily: 'poppins',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    letterSpacing: 1,
-                    wordSpacing: 1,
-                  ),
-                  decoration: const InputDecoration(
-                      hintText: 'exm: xxxx-xxx-xxx-xxx',
-                      hintStyle: TextStyle(
-                        fontFamily: 'poppins',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        letterSpacing: 1,
-                        wordSpacing: 1,
-                        fontStyle: FontStyle.italic,
-                      ),
-                      border: OutlineInputBorder(),
-                      labelStyle: TextStyle(
-                        fontFamily: 'poppins',
+                key: controller.gKfS,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: controller.urlController,
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                         letterSpacing: 1,
                         wordSpacing: 1,
                       ),
-                      labelText: 'License Key'),
-                  validator: (val) {
-                    if (val!.trim().isEmpty) {
-                      return "🔴 Key still empty";
-                    }
-                    return null;
-                  },
+                      decoration: const InputDecoration(
+                          hintText: 'exm: https://example.com',
+                          hintStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: 1,
+                            wordSpacing: 1,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          border: OutlineInputBorder(),
+                          labelStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: 1,
+                            wordSpacing: 1,
+                          ),
+                          labelText: 'Server API'),
+                      validator: (val) {
+                        if (val!.trim().isEmpty) {
+                          return "🔴 Server API'), still empty";
+                        }
+                        return null;
+                      },
+                    ),
+                  const SizedBox(height: 10 ,),
+                    TextFormField(
+                      controller: controller.keyController,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        letterSpacing: 1,
+                        wordSpacing: 1,
+                      ),
+                      decoration: const InputDecoration(
+                          hintText: 'exm: sxxx:xxxxxxxxxx',
+                          hintStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: 1,
+                            wordSpacing: 1,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          border: OutlineInputBorder(),
+                          labelStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: 1,
+                            wordSpacing: 1,
+                          ),
+                          labelText: 'License Key'),
+                      validator: (val) {
+                        if (val!.trim().isEmpty) {
+                          return "🔴 Key still empty";
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
               ),
               SizedBox(
@@ -80,7 +107,7 @@ class _AuthViewState extends State<AuthView> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.maroon),
-                  onPressed: auhtController.registerLicense,
+                  onPressed:controller.registerLicense,
                   child: const Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
