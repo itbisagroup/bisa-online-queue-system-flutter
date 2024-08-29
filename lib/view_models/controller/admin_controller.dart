@@ -42,7 +42,7 @@ class AdminController extends GetxController {
   final pax = <Pax>[].obs;
   final withhold = <Withhold>[].obs;
   final allQueue = <QueueList>[];
-  final Map<String, RxBool> buttonCall = {};
+  final Map<String, Map<String, dynamic>> buttonCall = {};
   final Map<String, RxBool> buttonAdd = {};
   final Map<String, RxBool> updateStatus = {};
   final AudioPlayerWav audioPlayer = AudioPlayerWav();
@@ -56,7 +56,7 @@ class AdminController extends GetxController {
   var statusCron = true.obs;
   var lastCrone = ''.obs;
   var buttonRefreshDetail = false.obs;
-  final controllerCountdDown = CountDownController();
+
   var statusRealtime = false.obs;
   var color = Colors.black.obs;
   var availableLanguages = <String>[].obs;
@@ -92,6 +92,7 @@ class AdminController extends GetxController {
           key: 'env_path',
           value: 'd:/laragon/www/bisa-online-queue/public/assets/ads/');
     }
+
     runCronTask();
     timerDialogEndShift();
     FlutterWindowClose.setWindowShouldCloseHandler(() async {
@@ -167,6 +168,7 @@ class AdminController extends GetxController {
   void runCronTask() {
     var cron = Cron();
     bool? previousStatus;
+    int errorCount = 0;
 
     cron.schedule(Schedule.parse('* * * * *'), () async {
       try {
@@ -179,13 +181,28 @@ class AdminController extends GetxController {
         }
 
         previousStatus = true;
+        errorCount = 0;
       } catch (error) {
+        errorCount++;
         statusCron.value = false;
         lastCrone.value = DateFormat('hh:mm').format(DateTime.now());
 
         if (previousStatus != false) {
           await _logApp.writeLog("Failed cron ${error.toString()}");
-          _logApp.sendSlackLog(branch.value.fullName!, "Failed cron ${error.toString()}");
+          _logApp.sendSlackLog(
+              branch.value.fullName!, "Failed cron ${error.toString()}");
+        }
+        if (errorCount >= 5) {
+          await apiSync.flushParameter().then((value) {
+            _logApp.sendSlackLog(branch.value.fullName!,
+                "Flush parameter cron ${value.toString()}");
+          }).onError((error, stackTrace) async {
+            await _logApp
+                .writeLog("Failed flush parameter cron ${error.toString()}");
+            _logApp.sendSlackLog(branch.value.fullName!,
+                "Failed flush parameter cron ${error.toString()}");
+          });
+          errorCount = 0;
         }
 
         previousStatus = false;
@@ -208,6 +225,7 @@ class AdminController extends GetxController {
     Timer(const Duration(seconds: 2), () {
       updateQueueSecondaryWindows();
       updateDataSecondaryWindows();
+      doFullscreen();
     });
   }
 
@@ -231,6 +249,22 @@ class AdminController extends GetxController {
         queue[i] = "${notation[i]}000";
       }
     }
+    return queue;
+  }
+
+  List<String?> getAllNextQueueNumbers() {
+    List<String?> notation =
+        paxWithQueue.map((paxWithQueue) => paxWithQueue.pax?.notation).toList();
+
+    List<String?> queue = paxWithQueue
+        .map((paxWithQueue) => paxWithQueue.queue?.nextQueue)
+        .toList();
+
+    for (int i = 0; i < queue.length; i++) {
+      if (queue[i] == "0000") {
+        queue[i] = "${notation[i]}000";
+      }
+    }
 
     return queue;
   }
@@ -242,10 +276,13 @@ class AdminController extends GetxController {
   Future<void> updateQueueSecondaryWindows() async {
     // Get all queue numbers
     List<String?> queueNumbers = getAllQueueNumbers();
+    List<String?> queueNextNumbers = getAllNextQueueNumbers();
     String jsonDataList = jsonEncode(queueNumbers);
+    String nextQueue = jsonEncode(queueNextNumbers);
 
     for (var windowID in secondaryWindowIDs) {
       DesktopMultiWindow.invokeMethod(windowID, "updateQueue", jsonDataList);
+      DesktopMultiWindow.invokeMethod(windowID, "nextQueue", nextQueue);
     }
   }
 
@@ -263,18 +300,20 @@ class AdminController extends GetxController {
     }
   }
 
-  Future<void> onUpdate() async {
-    String jsonDataList = jsonEncode(true);
+  Future<void> doFullscreen() async {
+    String doFullscreen = jsonEncode(branch.value.playAds);
 
     for (var windowID in secondaryWindowIDs) {
-      DesktopMultiWindow.invokeMethod(windowID, "refresh", jsonDataList);
+      DesktopMultiWindow.invokeMethod(windowID, "doFullscreen", doFullscreen);
     }
   }
 
   void sync() async {
     statusSynch.value = 'Syncing...';
     lastSynch.value = '';
-    updateQueueListApi();
+    await branchData();
+    await updateQueueListApi();
+
     if (secondaryWindowIDs.isNotEmpty) {
       await updateDataSecondaryWindows();
       await updateQueueSecondaryWindows();
@@ -293,10 +332,22 @@ class AdminController extends GetxController {
     // Get all queue numbers
     String numberTextView = jsonEncode(number);
     String callCount = jsonEncode(queueCount);
+    List<String?> queueNextNumbers = getAllNextQueueNumbers();
+    String nextQueue = jsonEncode(queueNextNumbers);
 
     for (var windowID in secondaryWindowIDs) {
       DesktopMultiWindow.invokeMethod(windowID, "callCount", callCount);
       DesktopMultiWindow.invokeMethod(windowID, "callQueue", numberTextView);
+      DesktopMultiWindow.invokeMethod(windowID, "nextQueue", nextQueue);
+    }
+  }
+
+  Future<void> updateNextQueue() async {
+    List<String?> queueNextNumbers = getAllNextQueueNumbers();
+    String nextQueue = jsonEncode(queueNextNumbers);
+
+    for (var windowID in secondaryWindowIDs) {
+      DesktopMultiWindow.invokeMethod(windowID, "nextQueue", nextQueue);
     }
   }
 
@@ -332,22 +383,38 @@ class AdminController extends GetxController {
 
   bool isButtonDisabled(String id) {
     if (!buttonCall.containsKey(id)) {
-      buttonCall[id] = false.obs;
+      buttonCall[id] = {
+        'isDisabled': false.obs,
+        'controllerCountDown': CountDownController()
+      };
     }
-    return buttonCall[id]!.value;
+    return buttonCall[id]!['isDisabled'].value;
   }
 
   void disableButton(String id) {
     if (!buttonCall.containsKey(id)) {
-      buttonCall[id] = false.obs;
+      buttonCall[id] = {
+        'isDisabled': false.obs,
+        'controllerCountDown': CountDownController()
+      };
     }
-    buttonCall[id]!.value = true;
+    buttonCall[id]!['isDisabled'].value = true;
   }
 
   void enableButton(String id) {
     if (buttonCall.containsKey(id)) {
-      buttonCall[id]!.value = false;
+      buttonCall[id]!['isDisabled'].value = false;
     }
+  }
+
+  CountDownController getController(String id) {
+    if (!buttonCall.containsKey(id)) {
+      buttonCall[id] = {
+        'isDisabled': false.obs,
+        'controllerCountDown': CountDownController()
+      };
+    }
+    return buttonCall[id]!['controllerCountDown'];
   }
 
   bool isButtonAddDisabled(String id) {
@@ -561,12 +628,14 @@ class AdminController extends GetxController {
     _apiQueue.addNewQueue(paxId, paxQuantity).then((value) async {
       final queueId = value['data']['queue']['queueCode'];
       String queueNumber = value['data']['queue']['queueNumber'];
+      doFullscreen();
 
       await AppDialog.showToastSuccess(
         title: queueNumber,
         desc: 'Queue $queueNumber created succesfuly',
         func: () async {
           await updateQueueListApi();
+          await updateNextQueue();
           await printQueue(queueId);
           enableAddButton(paxId);
         },
@@ -622,7 +691,7 @@ class AdminController extends GetxController {
     disableUpdateStatus(paxId);
     _apiQueue.addStatusQueue(queueId, '4').then((value) async {
       final number = value['data']['queue']['queueNumber'];
-
+      doFullscreen();
       await AppDialog.showToastSuccess(
         title: number,
         desc: 'Status successfully updated to served',
@@ -659,7 +728,7 @@ class AdminController extends GetxController {
       if (kDebugMode) {
         print('void Queue Number: $number');
       }
-
+      doFullscreen();
       await AppDialog.showToastSuccess(
         title: number,
         desc: 'Status successfully updated to void',
@@ -692,6 +761,7 @@ class AdminController extends GetxController {
     AppDialog.showDialogLoading();
     _apiQueue.addStatusQueue(queueId, '4').then((value) async {
       Get.back();
+      doFullscreen();
       final number = value['data']['queue']['queueNumber'];
       await AppDialog.showToastSuccess(
         title: number,
@@ -720,6 +790,7 @@ class AdminController extends GetxController {
     AppDialog.showDialogLoading();
     _apiQueue.addStatusQueue(queueId, '7').then((value) async {
       Get.back();
+      doFullscreen();
       final number = value['data']['queue']['queueNumber'];
       if (kDebugMode) {
         print('void Queue Number: $number');
@@ -781,6 +852,7 @@ class AdminController extends GetxController {
     AppDialog.showDialogLoading();
     _apiQueue.addStatusQueue(queueId, '4').then((value) async {
       Get.back();
+      doFullscreen();
       final number = value['data']['queue']['queueNumber'];
       await AppDialog.showToastSuccess(
           title: number,
@@ -811,6 +883,7 @@ class AdminController extends GetxController {
     AppDialog.showDialogLoading();
     _apiQueue.addStatusQueue(queueId, '7').then((value) async {
       Get.back();
+      doFullscreen();
       final number = value['data']['queue']['queueNumber'];
       if (kDebugMode) {
         print('void Queue Number: $number');
@@ -844,13 +917,21 @@ class AdminController extends GetxController {
   ) async {
     disableButton(paxId);
     _apiQueue.callQueue(paxId).then((value) async {
-      controllerCountdDown.start();
+      getController(paxId).start();
       final queueNumberCall = value['data']['queue']['queueNumber'];
+      final queuecallCount = value['data']['queue']['callCount'];
       final number = separateNumbers(queueNumberCall);
       final letters = separateLetters(queueNumberCall);
-      Timer(Duration(seconds: branch.value.callDelay!), () {
+
+      if (queuecallCount != branch.value.callCount) {
+        Timer(Duration(seconds: branch.value.callDelay!), () {
+          enableButton(paxId);
+        });
+      } else {
+        getController(paxId).reset();
         enableButton(paxId);
-      });
+      }
+
       if (secondaryWindowIDs.isEmpty) {
         AppDialog.showToastSuccess(
             title: queueNumberCall,
@@ -863,7 +944,7 @@ class AdminController extends GetxController {
         setRxRequestStatus(Status.COMPLETED);
       } else {
         await callSecondaryWindows(queueNumberCall, queueCount);
-
+        doFullscreen();
         await AppDialog.showToastSuccess(
           title: queueNumberCall,
           desc: 'Queue $queueNumberCall called succesfuly',
@@ -878,7 +959,8 @@ class AdminController extends GetxController {
       setError(error.toString());
       AppDialog.showToastError(
         title: 'Failed!',
-        desc: 'Unable to call or maybe the queue is already canceled',
+        desc:
+            'Unable to call or maybe the queue is already canceled  \n[$error]',
         func: () async {
           await updateQueueListApi();
 

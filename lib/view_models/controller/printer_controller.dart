@@ -15,7 +15,7 @@ import 'package:thermal_printer/thermal_printer.dart';
 class PrinterController extends GetxController {
   // Printer Type [bluetooth, usb, network]
   var defaultPrinterType = PrinterType.bluetooth.obs;
-      final LogApp _logApp = LogApp();
+  final LogApp _logApp = LogApp();
   var isBle = false.obs;
   var reconnect = false.obs;
   var isLoading = false.obs;
@@ -232,11 +232,10 @@ class PrinterController extends GetxController {
     final generator = Generator(PaperSize.mm58, profile);
 
     // Title Section
-    bytes += generator.text(title,
+    bytes += generator.text(title.toUpperCase(),
         styles: const PosStyles(
           align: PosAlign.center,
-          width: PosTextSize.size3,
-          height: PosTextSize.size2,
+          width: PosTextSize.size2,
         ),
         linesAfter: 2);
 
@@ -245,7 +244,6 @@ class PrinterController extends GetxController {
       'Queue Number',
       styles: const PosStyles(
         align: PosAlign.center,
-        width: PosTextSize.size2,
       ),
     );
     bytes += generator.text(queueNumber,
@@ -269,9 +267,6 @@ class PrinterController extends GetxController {
       align: PosAlign.center,
     );
 
-    // Separator Line
-    bytes += generator.emptyLines(1);
-
     // Cancel Code Section
     bytes += generator.text(
       'To cancel your queue, use the code below:',
@@ -279,21 +274,21 @@ class PrinterController extends GetxController {
         align: PosAlign.center,
       ),
     );
-    bytes += generator.text(cancelCode,
-        styles: const PosStyles(
-          align: PosAlign.center,
-          width: PosTextSize.size3,
-        ),
-        linesAfter: 1);
+    bytes += generator.text(
+      cancelCode,
+      styles: const PosStyles(
+        align: PosAlign.center,
+        width: PosTextSize.size2
+      ),
+    );
 
     // Footer Line
 
     bytes += generator.text('Thank you for your patience!',
         styles: const PosStyles(
           align: PosAlign.center,
-      
         ),
-        linesAfter: 2);
+        linesAfter: 1);
 
     bytes += generator.text(
       'BISA Online Queue System V.0.2.1 (alpha-test)',
@@ -322,7 +317,7 @@ class PrinterController extends GetxController {
     bytes +=
         generator.setStyles(const PosStyles().copyWith(align: PosAlign.center));
     bytes += generator.setGlobalCodeTable('CP1252');
-    bytes += generator.text(outlet,
+    bytes += generator.text(outlet.toUpperCase(),
         styles: const PosStyles(
           align: PosAlign.center,
           width: PosTextSize.size3,
@@ -434,7 +429,7 @@ class PrinterController extends GetxController {
     );
 
     final printAt = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
-     bytes += generator.text(
+    bytes += generator.text(
       'Printed at: $printAt',
       styles: const PosStyles(
         align: PosAlign.center,
@@ -495,6 +490,7 @@ class PrinterController extends GetxController {
         desc:
             'Printer is not selected. Please select printer first in setting menu',
         func: () async {
+          Get.back();
           await _logApp.writeLog(" Printer is not selected ${e.toString()}");
         },
       );

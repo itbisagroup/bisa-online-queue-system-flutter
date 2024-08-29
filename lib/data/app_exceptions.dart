@@ -36,6 +36,9 @@ class ForbidenException extends AppExceptions {
 class BadGateway extends AppExceptions {
   BadGateway([String? message]) : super(message, 'Bad Gateway');
 }
+class ToManyRequest extends AppExceptions {
+  ToManyRequest([String? message]) : super(message, 'To Many Request');
+}
 
 class FetchDataException extends AppExceptions {
   FetchDataException([String? message]) : super(message, '');

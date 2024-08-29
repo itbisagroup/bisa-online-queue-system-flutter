@@ -16,6 +16,7 @@ import 'package:queue_system/widget/app_loading.dart';
 import 'package:queue_system/widget/app_text.dart';
 import 'package:queue_system/widget/no_internet.dart';
 import 'package:sizer/sizer.dart';
+import 'package:widget_and_text_animator/widget_and_text_animator.dart';
 import '../data/response/status.dart';
 
 class AdminView extends GetView<AdminController> {
@@ -37,7 +38,8 @@ class AdminView extends GetView<AdminController> {
               appBar: _appBarNoShift(context),
               title: 'Request Timeout!',
               description: 'Something went wrong, please try again',
-              onTryAgain: () {
+              onTryAgain: () async {
+                await controller.branchData();
                 controller.updateQueueListApi();
               },
             );
@@ -60,6 +62,18 @@ class AdminView extends GetView<AdminController> {
               title: 'Server hit a snag!',
               description: 'Please wait a moment and try again',
               onTryAgain: () async {
+                await controller.branchData();
+                controller.updateQueueListApi();
+              },
+            );
+          }
+          if (controller.error.value == 'To Many Request') {
+            return DialogError(
+              appBar: _appBarNoShift(context),
+              title: 'Server hit a too many request!',
+              description: 'Please wait a moment and try again',
+              onTryAgain: () async {
+                await controller.branchData();
                 controller.updateQueueListApi();
               },
             );
@@ -79,8 +93,9 @@ class AdminView extends GetView<AdminController> {
               title: 'Something Went Wrong!',
               description:
                   'There is an error, please try again later or contact the administrator',
-              onTryAgain: () {
-                controller.updateQueueListApi();
+              onTryAgain: () async {
+                await controller.branchData();
+                await controller.updateQueueListApi();
               },
             );
           }
@@ -267,8 +282,13 @@ class AdminView extends GetView<AdminController> {
                                       duration:
                                           controller.branch.value.callDelay!,
                                       initialDuration: 0,
-                                      controller:
-                                          controller.controllerCountdDown,
+                                      controller: controller.getController(
+                                          controller
+                                              .paxWithQueue[controller
+                                                  .paxWithQueue
+                                                  .indexOf(tags)]
+                                              .pax!
+                                              .id!),
                                       width: 25,
                                       height: 25,
                                       ringColor: Colors.grey[300]!,
@@ -462,7 +482,7 @@ class AdminView extends GetView<AdminController> {
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
-                                items:  [
+                                items: [
                                   DropdownMenuItem(
                                     value: 'served',
                                     child: Row(
@@ -673,15 +693,20 @@ class AdminView extends GetView<AdminController> {
                     fontSize: 50,
                     fontWeight: FontWeight.bold,
                     color: AppColors.maroon),
-                AppText(
-                  text: controller
-                      .paxWithQueue[controller.paxWithQueue.indexOf(tags)]
-                      .queue!
-                      .queueNumber!
+                TextAnimator(
+                  controller.paxWithQueue[controller.paxWithQueue.indexOf(tags)]
+                      .queue!.queueNumber!
                       .substring(1),
-                  fontSize: 45,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.black,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 45,
+                      fontFamily: 'Poppins',
+                      letterSpacing: 1,
+                      wordSpacing: 1,
+                      color: AppColors.black),
+                  incomingEffect:
+                      WidgetTransitionEffects.incomingSlideInFromBottom(
+                          duration: const Duration(milliseconds: 1500)),
                 ),
               ],
             ),
@@ -763,22 +788,32 @@ class AdminView extends GetView<AdminController> {
       bottomOpacity: 30,
       toolbarHeight: 120,
       backgroundColor: AppColors.white,
-      title: Column(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CachedNetworkImage(
-            imageUrl:  controller.branch.value.brand!.logo!,
-            width: 10.w,
-            height: 2.h,
-            progressIndicatorBuilder: (context, url, downloadProgress) =>
-                SizedBox(
-                  width: 50,
-                  height: 50,
-                  child: CircularProgressIndicator(value: downloadProgress.progress)),
-            errorWidget: (context, url, error) => const AppText(text: 'logo',fontSize: 7,),
-          ),
+          controller.branch.value.brand!.logo!.isEmpty
+              ? const AppText(
+                  text: 'logo',
+                  fontSize: 7,
+                )
+              : CachedNetworkImage(
+                  imageUrl: controller.branch.value.brand!.logo!,
+                  height: 3.5.h,
+                  progressIndicatorBuilder: (context, url, downloadProgress) =>
+                      SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: CircularProgressIndicator(
+                              value: downloadProgress.progress)),
+                  errorWidget: (context, url, error) => const AppText(
+                    text: 'logo',
+                    fontSize: 7,
+                  ),
+                ),
+          SizedBox(width: 30),
           TitleText(
             text: controller.branch.value.fullName!,
-            fontSize: 32,
+            fontSize: 14.sp,
             color: Colors.black,
             fontWeight: FontWeight.w900,
           ),
@@ -916,7 +951,7 @@ class AdminView extends GetView<AdminController> {
                       textAlign: TextAlign.center,
                     ),
                     AppText(
-                      text: '',
+                      text: 'Bisagroup © 2024. All Rights Reserved',
                       fontWeight: FontWeight.normal,
                       fontSize: 12,
                       maxLines: 2,
@@ -1143,8 +1178,11 @@ class AdminView extends GetView<AdminController> {
                                                               color: AppColors
                                                                   .confirm,
                                                             ),
-                                                            label:  AppText(
-                                                                text: QueueStatus.served.label,
+                                                            label: AppText(
+                                                                text:
+                                                                    QueueStatus
+                                                                        .served
+                                                                        .label,
                                                                 color: AppColors
                                                                     .confirm)),
                                                         TextButton.icon(
@@ -1161,9 +1199,9 @@ class AdminView extends GetView<AdminController> {
                                                               color: AppColors
                                                                   .maroon,
                                                             ),
-                                                            label:
-                                                                 AppText(
-                                                              text: QueueStatus.voided.label,
+                                                            label: AppText(
+                                                              text: QueueStatus
+                                                                  .voided.label,
                                                               color: AppColors
                                                                   .maroon,
                                                             ))
@@ -1360,7 +1398,8 @@ class AdminView extends GetView<AdminController> {
                                                 ),
                                                 ActionChip(
                                                   label: AppText(
-                                                    text:QueueStatus.waiting.label,
+                                                    text: QueueStatus
+                                                        .waiting.label,
                                                     fontSize: 8,
                                                     fontWeight: FontWeight.bold,
                                                     color: controller
@@ -1392,7 +1431,8 @@ class AdminView extends GetView<AdminController> {
                                                 ),
                                                 ActionChip(
                                                   label: AppText(
-                                                    text: QueueStatus.calling.label,
+                                                    text: QueueStatus
+                                                        .calling.label,
                                                     fontSize: 8,
                                                     fontWeight: FontWeight.bold,
                                                     color: controller
@@ -1424,7 +1464,8 @@ class AdminView extends GetView<AdminController> {
                                                 ),
                                                 ActionChip(
                                                   label: AppText(
-                                                    text: QueueStatus.lastCall.label,
+                                                    text: QueueStatus
+                                                        .lastCall.label,
                                                     fontSize: 8,
                                                     fontWeight: FontWeight.bold,
                                                     color: controller
@@ -1456,7 +1497,8 @@ class AdminView extends GetView<AdminController> {
                                                 ),
                                                 ActionChip(
                                                   label: AppText(
-                                                    text: QueueStatus.served.label,
+                                                    text: QueueStatus
+                                                        .served.label,
                                                     fontSize: 8,
                                                     fontWeight: FontWeight.bold,
                                                     color: controller
@@ -1488,7 +1530,8 @@ class AdminView extends GetView<AdminController> {
                                                 ),
                                                 ActionChip(
                                                   label: AppText(
-                                                    text: QueueStatus.voided.label,
+                                                    text: QueueStatus
+                                                        .voided.label,
                                                     fontSize: 8,
                                                     fontWeight: FontWeight.bold,
                                                     color: controller
@@ -1520,7 +1563,8 @@ class AdminView extends GetView<AdminController> {
                                                 ),
                                                 ActionChip(
                                                   label: AppText(
-                                                    text: QueueStatus.cancelled.label,
+                                                    text: QueueStatus
+                                                        .cancelled.label,
                                                     fontSize: 8,
                                                     fontWeight: FontWeight.bold,
                                                     color: controller
@@ -1552,7 +1596,8 @@ class AdminView extends GetView<AdminController> {
                                                 ),
                                                 ActionChip(
                                                   label: AppText(
-                                                    text: QueueStatus.expired.label,
+                                                    text: QueueStatus
+                                                        .expired.label,
                                                     fontSize: 8,
                                                     fontWeight: FontWeight.bold,
                                                     color: controller
@@ -1919,7 +1964,7 @@ class AdminView extends GetView<AdminController> {
                                                                           ],
                                                                         ),
                                                                       ),
-                                                                       PopupMenuItem<
+                                                                      PopupMenuItem<
                                                                           String>(
                                                                         value:
                                                                             'served',
@@ -1942,7 +1987,7 @@ class AdminView extends GetView<AdminController> {
                                                                           ],
                                                                         ),
                                                                       ),
-                                                                       PopupMenuItem<
+                                                                      PopupMenuItem<
                                                                           String>(
                                                                         value:
                                                                             'void',

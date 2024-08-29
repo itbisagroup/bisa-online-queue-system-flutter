@@ -11,6 +11,7 @@ import 'package:queue_system/utils/enum/queue_status.dart';
 import 'package:queue_system/view_models/controller/shift_controller.dart';
 import 'package:queue_system/widget/app_text.dart';
 import 'package:sizer/sizer.dart';
+import 'package:widget_and_text_animator/widget_and_text_animator.dart';
 
 class ShiftView extends GetView<ShiftController> {
   const ShiftView({super.key});
@@ -27,75 +28,83 @@ class ShiftView extends GetView<ShiftController> {
             fontSize: 30,
           ),
         ),
-        floatingActionButton: Obx(() => controller.buttonNew.value
-            ? SizedBox(
-                width: 160,
-                child: FloatingActionButton(
-                  heroTag: 'new',
-                  backgroundColor: AppColors.confirm,
-                  onPressed: () {
-                    controller.newShiftDialog();
-                  },
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.only(right: 5.0),
-                        child: Icon(
-                          FontAwesomeIcons.calendarPlus,
-                          color: AppColors.white,
-                          size: 24,
+        floatingActionButton: Obx(() =>   WidgetAnimator(
+              incomingEffect: WidgetTransitionEffects(
+                  delay: const Duration(milliseconds: 15),
+                  offset: const Offset(0, -30),
+                  curve: Curves.bounceOut,
+                  duration: const Duration(milliseconds: 900)),
+              atRestEffect: WidgetRestingEffects.wave(),
+              child: controller.buttonNew.value
+              ? SizedBox(
+                  width: 160,
+                  child: FloatingActionButton(
+                    heroTag: 'new',
+                    backgroundColor: AppColors.confirm,
+                    onPressed: () {
+                      controller.newShiftDialog();
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(right: 5.0),
+                          child: Icon(
+                            FontAwesomeIcons.calendarPlus,
+                            color: AppColors.white,
+                            size: 24,
+                          ),
                         ),
-                      ),
-                      SizedBox(
-                        width: 10,
-                      ),
-                      AppText(
-                        text: 'New Shift',
-                        maxLines: 1,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.white,
-                        textAlign: TextAlign.end,
-                      ),
-                    ],
+                        SizedBox(
+                          width: 10,
+                        ),
+                        AppText(
+                          text: 'New Shift',
+                          maxLines: 1,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.white,
+                          textAlign: TextAlign.end,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : SizedBox(
+                  width: 160,
+                  child: FloatingActionButton(
+                    heroTag: 'end',
+                    backgroundColor: AppColors.maroon,
+                    onPressed: () {
+                      controller.endShiftDialog();
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(right: 5.0),
+                          child: Icon(
+                            Icons.exit_to_app,
+                            color: AppColors.white,
+                            size: 24,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        AppText(
+                          text: 'End Shift',
+                          maxLines: 1,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.white,
+                          textAlign: TextAlign.end,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              )
-            : SizedBox(
-                width: 160,
-                child: FloatingActionButton(
-                  heroTag: 'end',
-                  backgroundColor: AppColors.maroon,
-                  onPressed: () {
-                    controller.endShiftDialog();
-                  },
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.only(right: 5.0),
-                        child: Icon(
-                          Icons.exit_to_app,
-                          color: AppColors.white,
-                          size: 24,
-                        ),
-                      ),
-                      SizedBox(
-                        width: 10,
-                      ),
-                      AppText(
-                        text: 'End Shift',
-                        maxLines: 1,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.white,
-                        textAlign: TextAlign.end,
-                      ),
-                    ],
-                  ),
-                ),
-              )),
+        )),
         body: Obx(() {
           if (controller.isLoading.value) {
             return const Center(
@@ -482,7 +491,9 @@ class ShiftView extends GetView<ShiftController> {
                                                                 color: Colors
                                                                     .white,
                                                               ),
-                                                              color:  QueueStatus.waiting.color,
+                                                              color: QueueStatus
+                                                                  .waiting
+                                                                  .color,
                                                               value: controller
                                                                   .detailShift
                                                                   .queue!
@@ -520,7 +531,9 @@ class ShiftView extends GetView<ShiftController> {
                                                                 color: Colors
                                                                     .white,
                                                               ),
-                                                              color:QueueStatus.calling.color,
+                                                              color: QueueStatus
+                                                                  .calling
+                                                                  .color,
                                                               value: controller
                                                                   .detailShift
                                                                   .queue!
@@ -558,7 +571,9 @@ class ShiftView extends GetView<ShiftController> {
                                                                 color: Colors
                                                                     .white,
                                                               ),
-                                                              color: QueueStatus.lastCall.color,
+                                                              color: QueueStatus
+                                                                  .lastCall
+                                                                  .color,
                                                               value: controller
                                                                   .detailShift
                                                                   .queue!
@@ -597,7 +612,8 @@ class ShiftView extends GetView<ShiftController> {
                                                                     .white,
                                                               ),
                                                               showTitle: true,
-                                                              color: QueueStatus.served.color,
+                                                              color: QueueStatus
+                                                                  .served.color,
                                                               value: controller
                                                                   .detailShift
                                                                   .queue!
@@ -635,7 +651,8 @@ class ShiftView extends GetView<ShiftController> {
                                                                 color: Colors
                                                                     .white,
                                                               ),
-                                                              color: QueueStatus.voided.color,
+                                                              color: QueueStatus
+                                                                  .voided.color,
                                                               value: controller
                                                                   .detailShift
                                                                   .queue!
@@ -673,8 +690,9 @@ class ShiftView extends GetView<ShiftController> {
                                                                 color: Colors
                                                                     .white,
                                                               ),
-                                                              color:
-                                                                  QueueStatus.cancelled.color,
+                                                              color: QueueStatus
+                                                                  .cancelled
+                                                                  .color,
                                                               value: controller
                                                                   .detailShift
                                                                   .queue!
@@ -712,7 +730,9 @@ class ShiftView extends GetView<ShiftController> {
                                                                 color: Colors
                                                                     .white,
                                                               ),
-                                                              color: QueueStatus.expired.color,
+                                                              color: QueueStatus
+                                                                  .expired
+                                                                  .color,
                                                               value: controller
                                                                   .detailShift
                                                                   .queue!
@@ -723,7 +743,16 @@ class ShiftView extends GetView<ShiftController> {
                                                                       9)
                                                                   .length
                                                                   .toDouble(),
-                                                              title: 'Expired',
+                                                              title: controller
+                                                                  .detailShift
+                                                                  .queue!
+                                                                  .where((element) =>
+                                                                      element
+                                                                          .status
+                                                                          .value ==
+                                                                      9)
+                                                                  .length
+                                                                  .toString(),
                                                               badgePositionPercentageOffset:
                                                                   10,
                                                               radius: 50,
@@ -751,7 +780,8 @@ class ShiftView extends GetView<ShiftController> {
                                                   Container(
                                                     width: 1.w,
                                                     height: 0.5.h,
-                                                    color: QueueStatus.waiting.color,
+                                                    color: QueueStatus
+                                                        .waiting.color,
                                                   ),
                                                   AppText(
                                                     text: QueueStatus
@@ -764,7 +794,8 @@ class ShiftView extends GetView<ShiftController> {
                                                   Container(
                                                     width: 1.w,
                                                     height: 0.5.h,
-                                                    color: QueueStatus.calling.color,
+                                                    color: QueueStatus
+                                                        .calling.color,
                                                   ),
                                                   AppText(
                                                       text: QueueStatus
@@ -776,7 +807,8 @@ class ShiftView extends GetView<ShiftController> {
                                                   Container(
                                                     width: 1.w,
                                                     height: 0.5.h,
-                                                    color: QueueStatus.lastCall.color,
+                                                    color: QueueStatus
+                                                        .lastCall.color,
                                                   ),
                                                   AppText(
                                                       text: QueueStatus
@@ -788,7 +820,8 @@ class ShiftView extends GetView<ShiftController> {
                                                   Container(
                                                     width: 1.w,
                                                     height: 0.5.h,
-                                                    color: QueueStatus.served.color,
+                                                    color: QueueStatus
+                                                        .served.color,
                                                   ),
                                                   AppText(
                                                       text: QueueStatus
@@ -800,7 +833,8 @@ class ShiftView extends GetView<ShiftController> {
                                                   Container(
                                                     width: 1.w,
                                                     height: 0.5.h,
-                                                    color: QueueStatus.voided.color,
+                                                    color: QueueStatus
+                                                        .voided.color,
                                                   ),
                                                   AppText(
                                                       text: QueueStatus
@@ -812,7 +846,8 @@ class ShiftView extends GetView<ShiftController> {
                                                   Container(
                                                     width: 1.w,
                                                     height: 0.5.h,
-                                                    color: QueueStatus.cancelled.color,
+                                                    color: QueueStatus
+                                                        .cancelled.color,
                                                   ),
                                                   AppText(
                                                       text: QueueStatus
@@ -824,7 +859,8 @@ class ShiftView extends GetView<ShiftController> {
                                                   Container(
                                                     width: 1.w,
                                                     height: 0.5.h,
-                                                    color: QueueStatus.expired.color,
+                                                    color: QueueStatus
+                                                        .expired.color,
                                                   ),
                                                   AppText(
                                                       text: QueueStatus
@@ -857,14 +893,17 @@ class ShiftView extends GetView<ShiftController> {
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 16.0),
                                             alignment: Alignment.centerLeft,
-                                            child: const Row(
+                                            child: Row(
                                               children: [
                                                 Expanded(
                                                     flex: 1,
                                                     child: Center(
                                                       child: AppText(
                                                           text: "Queue Number",
-                                                          fontSize: 12,
+                                                          fontSize: 4.sp,
+                                                          maxLines: 2,
+                                                          textAlign:
+                                                              TextAlign.center,
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           color: Colors.white),
@@ -874,7 +913,7 @@ class ShiftView extends GetView<ShiftController> {
                                                     child: Center(
                                                       child: AppText(
                                                           text: "Created At",
-                                                          fontSize: 12,
+                                                          fontSize: 4.sp,
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           color: Colors.white),
@@ -884,7 +923,7 @@ class ShiftView extends GetView<ShiftController> {
                                                     child: Center(
                                                       child: AppText(
                                                           text: "Quantity",
-                                                          fontSize: 12,
+                                                          fontSize: 4.sp,
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           color: Colors.white),
@@ -894,7 +933,7 @@ class ShiftView extends GetView<ShiftController> {
                                                     child: Center(
                                                       child: AppText(
                                                           text: "Call Count",
-                                                          fontSize: 12,
+                                                          fontSize: 4.sp,
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           color: Colors.white),
@@ -904,7 +943,7 @@ class ShiftView extends GetView<ShiftController> {
                                                     child: Center(
                                                       child: AppText(
                                                           text: "Latest Call",
-                                                          fontSize: 12,
+                                                          fontSize: 4.sp,
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           color: Colors.white),
@@ -914,7 +953,7 @@ class ShiftView extends GetView<ShiftController> {
                                                     child: Center(
                                                       child: AppText(
                                                           text: "Status",
-                                                          fontSize: 12,
+                                                          fontSize: 4.sp,
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           color: Colors.white),
@@ -940,12 +979,14 @@ class ShiftView extends GetView<ShiftController> {
                                                                 .toString(),
                                                             fontWeight:
                                                                 FontWeight.bold,
+                                                            fontSize: 3.5.sp,
                                                           ),
                                                         )),
                                                     Expanded(
                                                         flex: 2,
                                                         child: Center(
                                                           child: AppText(
+                                                             fontSize: 3.5.sp,
                                                               text: controller
                                                                   .formatDate(controller
                                                                       .detailShift
@@ -958,6 +999,7 @@ class ShiftView extends GetView<ShiftController> {
                                                         flex: 1,
                                                         child: Center(
                                                           child: AppText(
+                                                             fontSize: 3.5.sp,
                                                               text: controller
                                                                   .detailShift
                                                                   .queue![index]
@@ -968,6 +1010,7 @@ class ShiftView extends GetView<ShiftController> {
                                                         flex: 1,
                                                         child: Center(
                                                           child: AppText(
+                                                             fontSize: 3.5.sp,
                                                               text: controller
                                                                   .detailShift
                                                                   .queue![index]
@@ -984,19 +1027,22 @@ class ShiftView extends GetView<ShiftController> {
                                                                       .latestCall !=
                                                                   null
                                                               ? AppText(
+                                                                 fontSize: 3.5.sp,
                                                                   text: controller.formatDate(controller
                                                                       .detailShift
                                                                       .queue![
                                                                           index]
                                                                       .latestCall
                                                                       .toString()))
-                                                              : const AppText(
+                                                              :  AppText(
+                                                                 fontSize: 3.5.sp,
                                                                   text: '-'),
                                                         )),
                                                     Expanded(
                                                         flex: 2,
                                                         child: Center(
                                                           child: AppText(
+                                                             fontSize: 3.5.sp,
                                                               text: controller
                                                                   .detailShift
                                                                   .queue![index]

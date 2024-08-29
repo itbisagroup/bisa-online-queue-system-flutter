@@ -90,6 +90,8 @@ class NetworkApiService extends BaseApiServices {
         throw ForbidenException('');
       case 502:
         throw BadGateway('');
+      case 429:
+        throw ToManyRequest('');
       default:
         throw FetchDataException(response.statusCode.toString());
     }

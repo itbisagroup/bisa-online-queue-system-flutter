@@ -58,6 +58,7 @@ dependencies:
   video_player_control_panel: ^1.1.1
   slack_logger: ^1.0.7
   cached_network_image: ^3.4.1
+  widget_and_text_animator: ^1.1.5
 
 
   

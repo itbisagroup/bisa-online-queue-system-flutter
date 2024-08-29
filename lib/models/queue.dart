@@ -2,14 +2,14 @@ import 'package:queue_system/models/pax.dart';
 
 class Queue {
   final String? id;
-  final String? queueCode; 
+  final String? queueCode;
   final String? queueNumber;
-  final int? queueQty;  // Updated field name
+  final String? nextQueue;
+  final int? queueQty; // Updated field name
   final int? waitingCount;
-  final int? printCount;  // New field
+  final int? printCount; // New field
   final int? callCount;
   final DateTime? createdDate;
-
 
   Queue({
     this.id,
@@ -20,7 +20,7 @@ class Queue {
     this.printCount,
     this.callCount,
     this.createdDate,
-
+    this.nextQueue,
   });
 
   factory Queue.fromJson(Map<String, dynamic> json) {
@@ -31,11 +31,12 @@ class Queue {
       queueCode: queueData?['queueCode'] ?? "0000",
       queueNumber: queueData?['queueNumber'] ?? "0000",
       queueQty: queueData?['queueQty'] ?? 0,
-      waitingCount: queueData?['waitingCount']?? 0,
-      printCount: queueData?['printCount']?? 0,
-      callCount: queueData?['callCount']?? 0,
-      createdDate: DateTime.parse( queueData?['createdAt']['date']??'0000-00-00'),
-
+      waitingCount: queueData?['waitingCount'] ?? 0,
+      printCount: queueData?['printCount'] ?? 0,
+      nextQueue: queueData?['nextQueue']?['queueNumber'] ?? '0000',
+      callCount: queueData?['callCount'] ?? 0,
+      createdDate:
+          DateTime.parse(queueData?['createdAt']['date'] ?? '0000-00-00'),
     );
   }
 }

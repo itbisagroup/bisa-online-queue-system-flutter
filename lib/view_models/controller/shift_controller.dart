@@ -206,6 +206,7 @@ class ShiftController extends GetxController {
           await const FlutterSecureStorage().delete(key: 'shift_date');
           await getDetailShiftEnd(uuid);
           await adminController.updateQueueSecondaryWindows();
+          adminController.doFullscreen();
         },
       );
     }).onError((error, stackTrace) async {
