@@ -47,8 +47,8 @@ class AuthController extends GetxController {
         Get.offAllNamed(Routes.home);
       } else {
         AppDialog.showToastError(
-            title: 'Failed to register license key!',
-            desc: "Please input the correct license key",
+            title: 'failed_register_key'.tr,
+            desc: "failed_register_key_desc".tr,
             func: Get.back);
       }
     });

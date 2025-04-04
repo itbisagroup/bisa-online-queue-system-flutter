@@ -7,12 +7,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:queue_system/data/network/base_api_services.dart';
+import 'package:queue_system/res/getx_localization.dart';
 
 import 'package:queue_system/routes/app_pages.dart';
 import 'package:queue_system/utils/constan.dart';
 import 'package:queue_system/view/customer_view.dart';
+
 import 'package:sizer/sizer.dart';
-import 'package:slack_logger/slack_logger.dart';
 import 'package:video_player_win/video_player_win_plugin.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -21,6 +22,7 @@ Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
   final httpLocal = await const FlutterSecureStorage().read(key: 'base_url');
+
   if (httpLocal != null) {
     await BaseApiServices.initializeBaseUrl();
   }
@@ -29,7 +31,17 @@ Future<void> main(List<String> args) async {
     DeviceOrientation.portraitUp,
   ]);
   if (!isSubWindow) {
-    runApp(const QueueApp());
+    final lang = await const FlutterSecureStorage().read(key: 'lang');
+    if (lang == null) {
+      await const FlutterSecureStorage().write(key: 'lang', value: 'en');
+    }
+    final langPrint = await const FlutterSecureStorage().read(key: 'lang_print');
+    if (langPrint == null) {
+      await const FlutterSecureStorage().write(key: 'lang_print', value: 'id');
+    }
+    runApp(QueueApp(
+      lang: lang ?? 'en',
+    ));
     windowManager.waitUntilReadyToShow(const WindowOptions(), () async {
       await windowManager.setTitle("BISA Online Queue System");
       await windowManager.show();
@@ -45,16 +57,18 @@ Future<void> main(List<String> args) async {
 }
 
 class QueueApp extends StatelessWidget {
-  const QueueApp({super.key});
+  const QueueApp({super.key, required this.lang});
+  final String lang;
 
   @override
   Widget build(BuildContext context) {
-     SlackLogger(webhookUrl: SlackInit.url,);
     return Sizer(builder: (context, orientation, deviceType) {
       return GetMaterialApp(
         navigatorKey: NavigationService.navigatorKey,
         initialRoute: AppPages.initial,
         getPages: AppPages.routes,
+        translations: Language(),
+        locale: Locale(lang),
         debugShowCheckedModeBanner: false,
         title: 'Queue App',
         theme: ThemeData(

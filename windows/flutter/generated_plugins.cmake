@@ -5,12 +5,14 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_multi_window
   desktop_window
+  file_saver
   flutter_secure_storage_windows
   flutter_window_close
   fullscreen_window
   rive_common
   screen_retriever
   thermal_printer
+  url_launcher_windows
   video_player_win
   window_manager
 )

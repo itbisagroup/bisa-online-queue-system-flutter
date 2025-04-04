@@ -36,19 +36,18 @@ class AdminView extends GetView<AdminController> {
           if (controller.error.value == 'Request Timed Out') {
             return DialogError(
               appBar: _appBarNoShift(context),
-              title: 'Request Timeout!',
-              description: 'Something went wrong, please try again',
+              title: 'rto_title'.tr,
+              description: 'rto_desc'.tr,
               onTryAgain: () async {
-                await controller.branchData();
-                controller.updateQueueListApi();
+                await controller.updateBranchData();
               },
             );
           }
           if (controller.error.value == 'Unauthorized') {
             return DialogError(
               appBar: _appBarNoShift(context),
-              title: 'Unauthorized!',
-              description: 'You are not authorized to access this page',
+              title: 'unauthorized_title'.tr,
+              description: 'unauthorized_desc'.tr,
               onTryAgain: () async {
                 const storage = FlutterSecureStorage();
                 await storage.deleteAll();
@@ -59,30 +58,28 @@ class AdminView extends GetView<AdminController> {
           if (controller.error.value == 'Bad Gateway') {
             return DialogError(
               appBar: _appBarNoShift(context),
-              title: 'Server hit a snag!',
-              description: 'Please wait a moment and try again',
+              title: 'bad_gateway_title'.tr,
+              description: 'bad_gateway_desc'.tr,
               onTryAgain: () async {
-                await controller.branchData();
-                controller.updateQueueListApi();
+                await controller.updateBranchData();
               },
             );
           }
           if (controller.error.value == 'To Many Request') {
             return DialogError(
               appBar: _appBarNoShift(context),
-              title: 'Server hit a too many request!',
-              description: 'Please wait a moment and try again',
+              title: 'too_many_request_title'.tr,
+              description: 'too_many_request_desc'.tr,
               onTryAgain: () async {
-                await controller.branchData();
-                controller.updateQueueListApi();
+                await controller.updateBranchData();
               },
             );
           }
           if (controller.error.value == 'Forbidden') {
             return ShiftNotFound(
               appBar: _appBarNoShift(context),
-              title: 'Shift Not Found!',
-              description: 'Try to create a new shift',
+              title: 'forbidden_title'.tr,
+              description: 'forbidden_desc'.tr,
               onTryAgain: () async {
                 Get.toNamed(Routes.shift);
               },
@@ -90,12 +87,10 @@ class AdminView extends GetView<AdminController> {
           } else {
             return DialogError(
               appBar: _appBarNoShift(context),
-              title: 'Something Went Wrong!',
-              description:
-                  'There is an error, please try again later or contact the administrator',
+              title: 'server_error_title'.tr,
+              description: 'server_error_desc'.tr,
               onTryAgain: () async {
-                await controller.branchData();
-                await controller.updateQueueListApi();
+                await controller.updateBranchData();
               },
             );
           }
@@ -133,19 +128,24 @@ class AdminView extends GetView<AdminController> {
                       text:
                           '${controller.statusSynch.value} ${controller.lastSynch.value}',
                       color: AppColors.blackCalm,
+                      fontSize: 10,
                     ),
                     Row(
                       children: [
                         controller.statusCron.value
-                            ? const AppText(
-                                text: 'Success',
+                            ? AppText(
+                                text: 'succeed_send_data'.tr,
                                 color: AppColors.confirm,
+                                fontSize: 10,
                               )
-                            : const AppText(
-                                text: 'Failed', color: AppColors.maroon),
+                            : AppText(
+                                text: 'failed_send_data'.tr,
+                                fontSize: 10,
+                                color: AppColors.maroon),
                         AppText(
                           text: ' ${controller.lastCrone.value}',
                           color: AppColors.blackCalm,
+                          fontSize: 10,
                         ),
                       ],
                     ),
@@ -217,7 +217,7 @@ class AdminView extends GetView<AdminController> {
                             ),
                             label: AppText(
                               text:
-                                  'Call (${controller.paxWithQueue[controller.paxWithQueue.indexOf(tags)].queue!.callCount!}/${controller.branch.value.callCount!})',
+                                  '${'call'.tr} (${controller.paxWithQueue[controller.paxWithQueue.indexOf(tags)].queue!.callCount!}/${controller.branch.value.callCount!})',
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: AppColors.grey,
@@ -256,18 +256,21 @@ class AdminView extends GetView<AdminController> {
                                     size: 18,
                                     color: AppColors.maroon,
                                   ),
-                                  label: AppText(
-                                    text: controller
-                                                .paxWithQueue[controller
-                                                    .paxWithQueue
-                                                    .indexOf(tags)]
-                                                .queue!
-                                                .callCount! >=
-                                            1
-                                        ? 'Recall (${controller.paxWithQueue[controller.paxWithQueue.indexOf(tags)].queue!.callCount!}/${controller.branch.value.callCount!})'
-                                        : 'Call (${controller.paxWithQueue[controller.paxWithQueue.indexOf(tags)].queue!.callCount!}/${controller.branch.value.callCount!})',
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
+                                  label: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: AppText(
+                                      text: controller
+                                                  .paxWithQueue[controller
+                                                      .paxWithQueue
+                                                      .indexOf(tags)]
+                                                  .queue!
+                                                  .callCount! >=
+                                              1
+                                          ? '${'recall'.tr} (${controller.paxWithQueue[controller.paxWithQueue.indexOf(tags)].queue!.callCount!}/${controller.branch.value.callCount!})'
+                                          : '${'call'.tr} (${controller.paxWithQueue[controller.paxWithQueue.indexOf(tags)].queue!.callCount!}/${controller.branch.value.callCount!})',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   style: ElevatedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(
@@ -311,8 +314,8 @@ class AdminView extends GetView<AdminController> {
                                       autoStart: false,
                                     ),
                                     const SizedBox(width: 10),
-                                    const AppText(
-                                      text: 'Calling...',
+                                    AppText(
+                                      text: '${'calling'.tr}...',
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.grey,
@@ -332,7 +335,7 @@ class AdminView extends GetView<AdminController> {
                         ),
                         label: AppText(
                           text:
-                              'Call (${controller.paxWithQueue[controller.paxWithQueue.indexOf(tags)].queue!.callCount!}/${controller.branch.value.callCount!})',
+                              '${'call'.tr}(${controller.paxWithQueue[controller.paxWithQueue.indexOf(tags)].queue!.callCount!}/${controller.branch.value.callCount!})',
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: AppColors.grey,
@@ -363,24 +366,27 @@ class AdminView extends GetView<AdminController> {
                           width: 160,
                           height: 32,
                           child: PopupMenuButton<String>(
-                            icon: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.group_add,
-                                  size: 20,
-                                  color: AppColors.maroon,
-                                ),
-                                SizedBox(
-                                  width: 8,
-                                ),
-                                AppText(
-                                  text: 'New Queue',
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ],
+                            icon: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.group_add,
+                                    size: 20,
+                                    color: AppColors.maroon,
+                                  ),
+                                  const SizedBox(
+                                    width: 8,
+                                  ),
+                                  AppText(
+                                    text: 'new_queue'.tr,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ],
+                              ),
                             ),
                             onSelected: (String value) {
                               controller.newQueue(
@@ -435,15 +441,15 @@ class AdminView extends GetView<AdminController> {
                         ),
                       ),
                     )
-                  : const Padding(
-                      padding: EdgeInsets.only(bottom: 8, top: 10),
+                  : Padding(
+                      padding: const EdgeInsets.only(bottom: 8, top: 10),
                       child: SizedBox(
                         width: 160,
                         height: 30,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SizedBox(
+                            const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -451,9 +457,9 @@ class AdminView extends GetView<AdminController> {
                                 strokeWidth: 2,
                               ),
                             ),
-                            SizedBox(width: 10),
+                            const SizedBox(width: 10),
                             AppText(
-                              text: 'Creating...',
+                              text: '${'creating'.tr}...',
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: AppColors.grey,
@@ -485,38 +491,44 @@ class AdminView extends GetView<AdminController> {
                                 items: [
                                   DropdownMenuItem(
                                     value: 'served',
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.check,
-                                          color: AppColors.confirm,
-                                        ),
-                                        const SizedBox(width: 5),
-                                        AppText(
-                                          text: QueueStatus.served.label,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.confirm,
-                                        ),
-                                      ],
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.check,
+                                            color: AppColors.confirm,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          AppText(
+                                            text: QueueStatus.served.label.tr,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.confirm,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                   DropdownMenuItem(
                                     value: 'void',
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.person_add_disabled_outlined,
-                                          color: AppColors.maroon,
-                                        ),
-                                        const SizedBox(width: 5),
-                                        AppText(
-                                          text: QueueStatus.voided.label,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.maroon,
-                                        ),
-                                      ],
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.person_add_disabled_outlined,
+                                            color: AppColors.maroon,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          AppText(
+                                            text: QueueStatus.voided.label.tr,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.maroon,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -651,8 +663,8 @@ class AdminView extends GetView<AdminController> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const AppText(
-                    text: 'Waiting : ',
+                  AppText(
+                    text: '${'waiting'.tr} : ',
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: AppColors.black,
@@ -783,15 +795,16 @@ class AdminView extends GetView<AdminController> {
     );
   }
 
-  AppBar _appBar(BuildContext context) {
-    return AppBar(
-      bottomOpacity: 30,
-      toolbarHeight: 120,
-      backgroundColor: AppColors.white,
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          controller.branch.value.brand!.logo!.isEmpty
+  PreferredSize _appBar(BuildContext context) {
+    return PreferredSize(
+      preferredSize: const Size(0, 150),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: AppBar(
+          toolbarHeight: 120,
+          backgroundColor: AppColors.white,
+          leadingWidth: 250,
+          leading: controller.branch.value.brand!.logo!.isEmpty
               ? const AppText(
                   text: 'logo',
                   fontSize: 7,
@@ -810,297 +823,335 @@ class AdminView extends GetView<AdminController> {
                     fontSize: 7,
                   ),
                 ),
-          SizedBox(width: 30),
-          TitleText(
+          title: TitleText(
             text: controller.branch.value.fullName!,
             fontSize: 14.sp,
             color: Colors.black,
             fontWeight: FontWeight.w900,
           ),
-        ],
-      ),
-      centerTitle: true,
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 30.0),
-          child: PopupMenuButton<String>(
-            icon: const Icon(
-              Icons.settings,
-              size: 30,
-              color: Colors.black,
-            ),
-            onSelected: (String value) {
-              if (value == 'screen') {
-                if (controller.secondaryWindowIDs.isEmpty) {
-                  controller.openSecondaryWindow();
-                } else {
-                  controller.closeSecondaryWindow();
+          centerTitle: true,
+          actions: [
+            PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.settings,
+                size: 40,
+                color: Colors.black,
+              ),
+              onSelected: (String value) {
+                if (value == 'screen') {
+                  if (controller.secondaryWindowIDs.isEmpty) {
+                    controller.openSecondaryWindow();
+                  } else {
+                    controller.closeSecondaryWindow();
+                  }
                 }
-              }
-              if (value == 'shift') {
-                Get.toNamed(Routes.shift);
-              }
-              if (value == 'config') {
-                Get.toNamed(Routes.config);
-              }
-              if (value == 'sync') {
-                controller.sync();
-              } else if (value == 'printer') {
-                Get.toNamed(Routes.printer);
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'sync',
-                child: Row(
-                  children: [
-                    Icon(Icons.refresh),
-                    Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: AppText(
-                        text: 'Synchronizes',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
+                if (value == 'shift') {
+                  Get.toNamed(Routes.shift);
+                }
+                if (value == 'config') {
+                  Get.toNamed(Routes.config);
+                }
+                if (value == 'sync') {
+                  controller.sync();
+                }
+                if (value == 'doc') {
+                  controller.launchUrlDoc();
+                } else if (value == 'printer') {
+                  Get.toNamed(Routes.printer);
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'sync',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.refresh),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'syncronize'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              PopupMenuItem<String>(
-                value: 'screen',
-                child: Row(
-                  children: [
-                    Icon(controller.secondaryWindowIDs.isEmpty
-                        ? Icons.add_to_queue
-                        : Icons.close_sharp),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: AppText(
-                        text: controller.secondaryWindowIDs.isEmpty
-                            ? 'Customer Screen'
-                            : 'Close Customer Screen',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
+                PopupMenuItem<String>(
+                  value: 'screen',
+                  child: Row(
+                    children: [
+                      Icon(controller.secondaryWindowIDs.isEmpty
+                          ? Icons.add_to_queue
+                          : Icons.close_sharp),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: controller.secondaryWindowIDs.isEmpty
+                              ? 'customer_screen'.tr
+                              : 'close_customer_screen'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'printer',
-                child: Row(
-                  children: [
-                    Icon(Icons.print_rounded),
-                    Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: AppText(
-                        text: 'Printer Setting',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
+                PopupMenuItem<String>(
+                  value: 'printer',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.print_rounded),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'printer_setting'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'shift',
-                child: Row(
-                  children: [
-                    Icon(
-                      FontAwesomeIcons.calendarPlus,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: AppText(
-                        text: 'Shift',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
+                PopupMenuItem<String>(
+                  value: 'shift',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        FontAwesomeIcons.calendarPlus,
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'config',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings_applications),
-                    Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: AppText(
-                        text: 'Configuration',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'shift'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const PopupMenuItem<String>(
-                enabled: false,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Divider(
-                      color: AppColors.black,
-                    ),
-                    AppText(
-                      text: 'Version 0.2.1 (alpha-test)',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      textAlign: TextAlign.center,
-                    ),
-                    AppText(
-                      text: 'Bisagroup © 2024. All Rights Reserved',
-                      fontWeight: FontWeight.normal,
-                      fontSize: 12,
-                      maxLines: 2,
-                      textAlign: TextAlign.center,
-                    ),
-                    Divider(
-                      color: AppColors.black,
-                    ),
-                  ],
+                PopupMenuItem<String>(
+                  value: 'config',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.settings_applications),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'config'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+                PopupMenuItem<String>(
+                  value: 'doc',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.help_center),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'help'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Divider(
+                        color: AppColors.black,
+                      ),
+                      AppText(
+                        text: '${'version'.tr} ${VersionApp.version}',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        textAlign: TextAlign.center,
+                      ),
+                      AppText(
+                        text: VersionApp.copyright,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 12,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                      ),
+                      const Divider(
+                        color: AppColors.black,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  AppBar _appBarNoShift(BuildContext context) {
-    return AppBar(
-      bottomOpacity: 30,
-      toolbarHeight: 120,
-      backgroundColor: AppColors.white,
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 30.0),
-          child: PopupMenuButton<String>(
-            icon: const Icon(
-              Icons.settings,
-              size: 30,
-              color: Colors.black,
+  PreferredSize _appBarNoShift(BuildContext context) {
+    return PreferredSize(
+      preferredSize: const Size(0, 96),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 20, left: 20),
+        child: AppBar(
+          bottomOpacity: 30,
+          toolbarHeight: 120,
+          backgroundColor: AppColors.white,
+          centerTitle: true,
+          actions: [
+            PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.settings,
+                size: 30,
+                color: Colors.black,
+              ),
+              onSelected: (String value) {
+                if (value == 'shift') {
+                  Get.toNamed(Routes.shift);
+                }
+                if (value == 'config') {
+                  Get.toNamed(Routes.config);
+                }
+                if (value == 'sync') {
+                  controller.sync();
+                }
+                if (value == 'doc') {
+                  controller.launchUrlDoc();
+                } else if (value == 'printer') {
+                  Get.toNamed(Routes.printer);
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'sync',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.refresh),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'syncronize'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'printer',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.print_rounded),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'printer_setting'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'shift',
+                  child: Row(
+                    children: [
+                      const Icon(
+                        FontAwesomeIcons.calendarPlus,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'shift'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'config',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.settings_applications),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'config'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'doc',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.help_center),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: AppText(
+                          text: 'help'.tr,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Divider(
+                        color: AppColors.black,
+                      ),
+                      AppText(
+                        text: '${'version'.tr} ${VersionApp.version}',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        textAlign: TextAlign.center,
+                      ),
+                      AppText(
+                        text: VersionApp.copyright,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 12,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                      ),
+                      const Divider(
+                        color: AppColors.black,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            onSelected: (String value) {
-              if (value == 'shift') {
-                Get.toNamed(Routes.shift);
-              }
-              if (value == 'config') {
-                Get.toNamed(Routes.config);
-              }
-              if (value == 'sync') {
-                controller.sync();
-              } else if (value == 'printer') {
-                Get.toNamed(Routes.printer);
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'sync',
-                child: Row(
-                  children: [
-                    Icon(Icons.refresh),
-                    Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: AppText(
-                        text: 'Synchronizes',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'printer',
-                child: Row(
-                  children: [
-                    Icon(Icons.print_rounded),
-                    Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: AppText(
-                        text: 'Printer Setting',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'shift',
-                child: Row(
-                  children: [
-                    Icon(
-                      FontAwesomeIcons.calendarPlus,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: AppText(
-                        text: 'Shift',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'config',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings_applications),
-                    Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: AppText(
-                        text: 'Configuration',
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                enabled: false,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Divider(
-                      color: AppColors.black,
-                    ),
-                    AppText(
-                      text: 'Version 0.2.1 (alpha-test)',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      textAlign: TextAlign.center,
-                    ),
-                    AppText(
-                      text: 'Bisagroup © 2024. All Rights Reserved',
-                      fontWeight: FontWeight.normal,
-                      fontSize: 12,
-                      maxLines: 2,
-                      textAlign: TextAlign.center,
-                    ),
-                    Divider(
-                      color: AppColors.black,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
   Widget _floatingButton(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.only(bottom: 20, left: 20),
       child: Stack(
         alignment: Alignment.bottomCenter,
         children: [
@@ -1121,11 +1172,11 @@ class AdminView extends GetView<AdminController> {
                             color: AppColors.lessBrown,
                             child: Column(
                               children: [
-                                const Expanded(
+                                Expanded(
                                   flex: 2,
                                   child: Center(
                                     child: AppText(
-                                      text: 'Queue Numbers Withhold',
+                                      text: 'withhold_queue'.tr,
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -1142,28 +1193,51 @@ class AdminView extends GetView<AdminController> {
                                           padding: const EdgeInsets.only(
                                               left: 20, right: 20, bottom: 10),
                                           child: SizedBox(
-                                            height: 100,
+                                            height: 60,
                                             child: Card(
                                               child: Container(
                                                 color: AppColors.white,
-                                                child: Column(
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceEvenly,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
                                                   children: [
                                                     AppText(
                                                       text:
                                                           withhold.queueNumber!,
-                                                      fontSize: 35,
+                                                      fontSize: 30,
                                                       fontWeight:
                                                           FontWeight.bold,
                                                       color: AppColors.black,
                                                     ),
                                                     Row(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceEvenly,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .end,
                                                       children: [
+                                                        TextButton.icon(
+                                                            onPressed: () {
+                                                              controller
+                                                                  .onItemWitWithholdSelected(
+                                                                'void',
+                                                                withhold
+                                                                    .queueCode!,
+                                                              );
+                                                            },
+                                                            icon: const Icon(
+                                                              size: 12,
+                                                              Icons.close,
+                                                              color: AppColors
+                                                                  .maroon,
+                                                            ),
+                                                            label: AppText(
+                                                              fontSize: 12,
+                                                              text: QueueStatus
+                                                                  .voided
+                                                                  .label
+                                                                  .tr,
+                                                              color: AppColors
+                                                                  .maroon,
+                                                            )),
                                                         TextButton.icon(
                                                             onPressed: () {
                                                               controller
@@ -1177,34 +1251,17 @@ class AdminView extends GetView<AdminController> {
                                                               Icons.done,
                                                               color: AppColors
                                                                   .confirm,
+                                                              size: 12,
                                                             ),
                                                             label: AppText(
+                                                                fontSize: 12,
                                                                 text:
                                                                     QueueStatus
                                                                         .served
-                                                                        .label,
+                                                                        .label
+                                                                        .tr,
                                                                 color: AppColors
                                                                     .confirm)),
-                                                        TextButton.icon(
-                                                            onPressed: () {
-                                                              controller
-                                                                  .onItemWitWithholdSelected(
-                                                                'void',
-                                                                withhold
-                                                                    .queueCode!,
-                                                              );
-                                                            },
-                                                            icon: const Icon(
-                                                              Icons.close,
-                                                              color: AppColors
-                                                                  .maroon,
-                                                            ),
-                                                            label: AppText(
-                                                              text: QueueStatus
-                                                                  .voided.label,
-                                                              color: AppColors
-                                                                  .maroon,
-                                                            ))
                                                       ],
                                                     )
                                                   ],
@@ -1221,7 +1278,7 @@ class AdminView extends GetView<AdminController> {
                       Positioned(
                           right: 1,
                           child: IconButton(
-                            tooltip: "Close",
+                            tooltip: 'close'.tr,
                             icon: const Icon(Icons.close),
                             onPressed: () {
                               controller.withHoldVisible.value = false;
@@ -1243,29 +1300,32 @@ class AdminView extends GetView<AdminController> {
                       onPressed: () {
                         controller.changeVisibleWithold();
                       },
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(right: 5.0),
-                            child: Icon(
-                              FontAwesomeIcons.personCircleExclamation,
-                              color: AppColors.maroon,
-                              size: 24,
-                            ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                FontAwesomeIcons.personCircleExclamation,
+                                color: AppColors.maroon,
+                                size: 24,
+                              ),
+                              const SizedBox(
+                                width: 10,
+                              ),
+                              AppText(
+                                text: 'withhold'.tr,
+                                maxLines: 1,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.black,
+                                textAlign: TextAlign.end,
+                              ),
+                            ],
                           ),
-                          SizedBox(
-                            width: 10,
-                          ),
-                          AppText(
-                            text: 'Withhold',
-                            maxLines: 1,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.black,
-                            textAlign: TextAlign.end,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -1279,10 +1339,10 @@ class AdminView extends GetView<AdminController> {
               height: 30,
               child: FloatingActionButton.extended(
                   backgroundColor: AppColors.maroon,
-                  label: const Row(
+                  label: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      Padding(
+                      const Padding(
                         padding: EdgeInsets.only(right: 5.0),
                         child: Icon(
                           Icons.paste,
@@ -1291,7 +1351,7 @@ class AdminView extends GetView<AdminController> {
                         ),
                       ),
                       AppText(
-                        text: 'All Queues',
+                        text: 'all_queue'.tr,
                         maxLines: 1,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -1336,20 +1396,22 @@ class AdminView extends GetView<AdminController> {
                                               controller
                                                   .apiQueueDetailSearch(value);
                                             },
-                                            decoration: const InputDecoration(
+                                            decoration: InputDecoration(
                                               isCollapsed: true,
-                                              contentPadding: EdgeInsets.all(9),
+                                              contentPadding:
+                                                  const EdgeInsets.all(9),
                                               isDense: true,
-                                              hintText: 'Search queue number',
-                                              border: OutlineInputBorder(
+                                              hintText: 'search_queue'.tr,
+                                              border: const OutlineInputBorder(
                                                 borderRadius: BorderRadius.all(
                                                     Radius.circular(20.0)),
                                               ),
-                                              hintStyle: TextStyle(
+                                              hintStyle: const TextStyle(
                                                 fontSize: 15,
                                                 color: AppColors.black,
                                               ),
-                                              prefixIcon: Icon(Icons.search),
+                                              prefixIcon:
+                                                  const Icon(Icons.search),
                                             ),
                                           ),
                                         ),
@@ -1359,28 +1421,33 @@ class AdminView extends GetView<AdminController> {
                                       ),
                                       SizedBox(
                                         height: 40,
-                                        child: SingleChildScrollView(
-                                          scrollDirection: Axis.vertical,
-                                          child: Obx(
-                                            () => Row(
+                                        child: Obx(
+                                          () => FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Row(
                                               mainAxisAlignment:
-                                                  MainAxisAlignment.spaceEvenly,
+                                                  MainAxisAlignment
+                                                      .spaceEvenly,
                                               children: [
+                                                const SizedBox(
+                                                  width: 6,
+                                                ),
                                                 ActionChip(
                                                   side: const BorderSide(
                                                       color: AppColors.grey
                                                       // No border color
                                                       ),
                                                   label: AppText(
-                                                    text: 'All',
+                                                    text: 'all'.tr,
                                                     fontSize: 8,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontWeight:
+                                                        FontWeight.bold,
                                                     color: controller
                                                                 .statusValueFilter
                                                                 .value ==
                                                             0
                                                         ? AppColors.white
-                                                        : AppColors.grey,
+                                                        : AppColors.black,
                                                   ),
                                                   backgroundColor: controller
                                                               .statusValueFilter
@@ -1389,25 +1456,30 @@ class AdminView extends GetView<AdminController> {
                                                       ? AppColors.maroon
                                                       : AppColors.white,
                                                   onPressed: () {
-                                                    controller.statusValueFilter
+                                                    controller
+                                                        .statusValueFilter
                                                         .value = 0;
-
+                                            
                                                     controller
                                                         .apiQueueDetailList();
                                                   },
                                                 ),
+                                                const SizedBox(
+                                                  width: 6,
+                                                ),
                                                 ActionChip(
                                                   label: AppText(
                                                     text: QueueStatus
-                                                        .waiting.label,
+                                                        .waiting.label.tr,
                                                     fontSize: 8,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontWeight:
+                                                        FontWeight.bold,
                                                     color: controller
                                                                 .statusValueFilter
                                                                 .value ==
                                                             1
                                                         ? AppColors.white
-                                                        : AppColors.grey,
+                                                        : AppColors.black,
                                                   ),
                                                   side: const BorderSide(
                                                       color: AppColors.grey
@@ -1423,24 +1495,29 @@ class AdminView extends GetView<AdminController> {
                                                     controller
                                                         .selectedPageNumber
                                                         .value = 1;
-                                                    controller.statusValueFilter
+                                                    controller
+                                                        .statusValueFilter
                                                         .value = 1;
                                                     controller
                                                         .apiQueueDetailList();
                                                   },
                                                 ),
+                                                const SizedBox(
+                                                  width: 6,
+                                                ),
                                                 ActionChip(
                                                   label: AppText(
                                                     text: QueueStatus
-                                                        .calling.label,
+                                                        .calling.label.tr,
                                                     fontSize: 8,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontWeight:
+                                                        FontWeight.bold,
                                                     color: controller
                                                                 .statusValueFilter
                                                                 .value ==
                                                             2
                                                         ? AppColors.white
-                                                        : AppColors.grey,
+                                                        : AppColors.black,
                                                   ),
                                                   side: const BorderSide(
                                                       color: AppColors.grey
@@ -1456,24 +1533,32 @@ class AdminView extends GetView<AdminController> {
                                                     controller
                                                         .selectedPageNumber
                                                         .value = 1;
-                                                    controller.statusValueFilter
+                                                    controller
+                                                        .statusValueFilter
                                                         .value = 2;
                                                     controller
                                                         .apiQueueDetailList();
                                                   },
                                                 ),
+                                                const SizedBox(
+                                                  width: 6,
+                                                ),
                                                 ActionChip(
-                                                  label: AppText(
-                                                    text: QueueStatus
-                                                        .lastCall.label,
-                                                    fontSize: 8,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: controller
-                                                                .statusValueFilter
-                                                                .value ==
-                                                            3
-                                                        ? AppColors.white
-                                                        : AppColors.grey,
+                                                  label: FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    child: AppText(
+                                                      text: QueueStatus
+                                                          .lastCall.label.tr,
+                                                      fontSize: 8,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: controller
+                                                                  .statusValueFilter
+                                                                  .value ==
+                                                              3
+                                                          ? AppColors.white
+                                                          : AppColors.black,
+                                                    ),
                                                   ),
                                                   side: const BorderSide(
                                                       color: AppColors.grey
@@ -1489,24 +1574,29 @@ class AdminView extends GetView<AdminController> {
                                                     controller
                                                         .selectedPageNumber
                                                         .value = 1;
-                                                    controller.statusValueFilter
+                                                    controller
+                                                        .statusValueFilter
                                                         .value = 3;
                                                     controller
                                                         .apiQueueDetailList();
                                                   },
                                                 ),
+                                                const SizedBox(
+                                                  width: 6,
+                                                ),
                                                 ActionChip(
                                                   label: AppText(
                                                     text: QueueStatus
-                                                        .served.label,
+                                                        .served.label.tr,
                                                     fontSize: 8,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontWeight:
+                                                        FontWeight.bold,
                                                     color: controller
                                                                 .statusValueFilter
                                                                 .value ==
                                                             4
                                                         ? AppColors.white
-                                                        : AppColors.grey,
+                                                        : AppColors.black,
                                                   ),
                                                   side: const BorderSide(
                                                       color: AppColors.grey
@@ -1522,24 +1612,29 @@ class AdminView extends GetView<AdminController> {
                                                     controller
                                                         .selectedPageNumber
                                                         .value = 1;
-                                                    controller.statusValueFilter
+                                                    controller
+                                                        .statusValueFilter
                                                         .value = 4;
                                                     controller
                                                         .apiQueueDetailList();
                                                   },
                                                 ),
+                                                const SizedBox(
+                                                  width: 6,
+                                                ),
                                                 ActionChip(
                                                   label: AppText(
                                                     text: QueueStatus
-                                                        .voided.label,
+                                                        .voided.label.tr,
                                                     fontSize: 8,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontWeight:
+                                                        FontWeight.bold,
                                                     color: controller
                                                                 .statusValueFilter
                                                                 .value ==
                                                             7
                                                         ? AppColors.white
-                                                        : AppColors.grey,
+                                                        : AppColors.black,
                                                   ),
                                                   side: const BorderSide(
                                                       color: AppColors.grey
@@ -1555,24 +1650,29 @@ class AdminView extends GetView<AdminController> {
                                                     controller
                                                         .selectedPageNumber
                                                         .value = 1;
-                                                    controller.statusValueFilter
+                                                    controller
+                                                        .statusValueFilter
                                                         .value = 7;
                                                     controller
                                                         .apiQueueDetailList();
                                                   },
                                                 ),
+                                                const SizedBox(
+                                                  width: 6,
+                                                ),
                                                 ActionChip(
                                                   label: AppText(
                                                     text: QueueStatus
-                                                        .cancelled.label,
+                                                        .cancelled.label.tr,
                                                     fontSize: 8,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontWeight:
+                                                        FontWeight.bold,
                                                     color: controller
                                                                 .statusValueFilter
                                                                 .value ==
                                                             8
                                                         ? AppColors.white
-                                                        : AppColors.grey,
+                                                        : AppColors.black,
                                                   ),
                                                   side: const BorderSide(
                                                       color: AppColors.grey
@@ -1588,24 +1688,29 @@ class AdminView extends GetView<AdminController> {
                                                     controller
                                                         .selectedPageNumber
                                                         .value = 1;
-                                                    controller.statusValueFilter
+                                                    controller
+                                                        .statusValueFilter
                                                         .value = 8;
                                                     controller
                                                         .apiQueueDetailList();
                                                   },
                                                 ),
+                                                const SizedBox(
+                                                  width: 6,
+                                                ),
                                                 ActionChip(
                                                   label: AppText(
                                                     text: QueueStatus
-                                                        .expired.label,
+                                                        .expired.label.tr,
                                                     fontSize: 8,
-                                                    fontWeight: FontWeight.bold,
+                                                    fontWeight:
+                                                        FontWeight.bold,
                                                     color: controller
                                                                 .statusValueFilter
                                                                 .value ==
                                                             9
                                                         ? AppColors.white
-                                                        : AppColors.grey,
+                                                        : AppColors.black,
                                                   ),
                                                   side: const BorderSide(
                                                       color: AppColors.grey
@@ -1621,11 +1726,15 @@ class AdminView extends GetView<AdminController> {
                                                     controller
                                                         .selectedPageNumber
                                                         .value = 1;
-                                                    controller.statusValueFilter
+                                                    controller
+                                                        .statusValueFilter
                                                         .value = 9;
                                                     controller
                                                         .apiQueueDetailList();
                                                   },
+                                                ),
+                                                const SizedBox(
+                                                  width: 6,
                                                 ),
                                               ],
                                             ),
@@ -1655,9 +1764,10 @@ class AdminView extends GetView<AdminController> {
                                                               CrossAxisAlignment
                                                                   .center,
                                                           children: [
-                                                            const AppText(
+                                                            AppText(
                                                               text:
-                                                                  'Unable to Load Data!',
+                                                                  'unable_to_load'
+                                                                      .tr,
                                                               fontSize: 16,
                                                             ),
                                                             const SizedBox(
@@ -1675,10 +1785,10 @@ class AdminView extends GetView<AdminController> {
                                                                 controller
                                                                     .apiQueueDetailList();
                                                               },
-                                                              child:
-                                                                  const AppText(
+                                                              child: AppText(
                                                                 text:
-                                                                    'Try Again',
+                                                                    'try_again'
+                                                                        .tr,
                                                                 fontSize: 16,
                                                                 color: AppColors
                                                                     .white,
@@ -1686,9 +1796,9 @@ class AdminView extends GetView<AdminController> {
                                                             ),
                                                           ],
                                                         )
-                                                      : const Center(
+                                                      : Center(
                                                           child: AppText(
-                                                            text: 'No data',
+                                                            text: 'no_data'.tr,
                                                             fontSize: 16,
                                                           ),
                                                         )
@@ -1720,42 +1830,42 @@ class AdminView extends GetView<AdminController> {
                                                                   children: [
                                                                     Expanded(
                                                                       child:
-                                                                          Column(
-                                                                        mainAxisAlignment:
-                                                                            MainAxisAlignment.center,
-                                                                        crossAxisAlignment:
-                                                                            CrossAxisAlignment.center,
-                                                                        children: [
-                                                                          AppText(
-                                                                            text:
-                                                                                queue.queueNumber,
-                                                                            fontSize:
-                                                                                26,
-                                                                            fontWeight:
-                                                                                FontWeight.bold,
-                                                                          ),
-                                                                          const SizedBox(
-                                                                              height: 3),
-                                                                          Row(
-                                                                            mainAxisAlignment:
-                                                                                MainAxisAlignment.center,
-                                                                            crossAxisAlignment:
-                                                                                CrossAxisAlignment.center,
-                                                                            children: [
-                                                                              Icon(
-                                                                                controller.statusIcons(queue.status.value!),
-                                                                                size: 16,
-                                                                                color: controller.statusColors(queue.status.value!),
-                                                                              ),
-                                                                              const SizedBox(width: 5),
-                                                                              AppText(
-                                                                                text: queue.status.label!,
-                                                                                fontSize: 14,
-                                                                                color: controller.statusColors(queue.status.value!),
-                                                                              ),
-                                                                            ],
-                                                                          ),
-                                                                        ],
+                                                                          FittedBox(
+                                                                        fit: BoxFit
+                                                                            .scaleDown,
+                                                                        child:
+                                                                            Column(
+                                                                          mainAxisAlignment:
+                                                                              MainAxisAlignment.center,
+                                                                          crossAxisAlignment:
+                                                                              CrossAxisAlignment.center,
+                                                                          children: [
+                                                                            AppText(
+                                                                              text: queue.queueNumber,
+                                                                              fontSize: 26,
+                                                                              fontWeight: FontWeight.bold,
+                                                                            ),
+                                                                            const SizedBox(height: 3),
+                                                                            Row(
+                                                                              mainAxisAlignment: MainAxisAlignment.center,
+                                                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                                                              children: [
+                                                                                Icon(
+                                                                                  controller.statusIcons(queue.status.value!),
+                                                                                  size: 16,
+                                                                                  color: controller.statusColors(queue.status.value!),
+                                                                                ),
+                                                                                const SizedBox(width: 5),
+                                                                                AppText(
+                                                                                  text: controller.statusLabel(queue.status.value!).tr,
+                                                                                  maxLines: 2,
+                                                                                  fontSize: 14,
+                                                                                  color: controller.statusColors(queue.status.value!),
+                                                                                ),
+                                                                              ],
+                                                                            ),
+                                                                          ],
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                     Expanded(
@@ -1840,8 +1950,8 @@ class AdminView extends GetView<AdminController> {
                                                                                 child: Column(
                                                                                   crossAxisAlignment: CrossAxisAlignment.start,
                                                                                   children: [
-                                                                                    const AppText(
-                                                                                      text: 'Created :',
+                                                                                    AppText(
+                                                                                      text: '${'created_at'.tr} :',
                                                                                       fontSize: 14,
                                                                                       fontWeight: FontWeight.bold,
                                                                                       color: AppColors.blackCalm,
@@ -1855,7 +1965,7 @@ class AdminView extends GetView<AdminController> {
                                                                                       height: 10,
                                                                                     ),
                                                                                     AppText(
-                                                                                      text: 'Call Count : ${queue.callCount}',
+                                                                                      text: '${'call_count'.tr} : ${queue.callCount}',
                                                                                       fontSize: 14,
                                                                                       fontWeight: FontWeight.bold,
                                                                                       color: AppColors.blackCalm,
@@ -1908,9 +2018,9 @@ class AdminView extends GetView<AdminController> {
                                                                         AppDialog
                                                                             .confirmationMsg(
                                                                           title:
-                                                                              "Served Queue",
+                                                                              "served_queue".tr,
                                                                           message:
-                                                                              "Are you sure want to served this queue?",
+                                                                              "served_queue_desc".tr,
                                                                           function:
                                                                               () {
                                                                             Get.back();
@@ -1926,9 +2036,9 @@ class AdminView extends GetView<AdminController> {
                                                                         AppDialog
                                                                             .confirmationMsg(
                                                                           title:
-                                                                              "Void Queue",
+                                                                              "void_queue".tr,
                                                                           message:
-                                                                              "Are you sure want to served this void?",
+                                                                              "void_queue_desc".tr,
                                                                           function:
                                                                               () {
                                                                             Get.back();
@@ -1945,18 +2055,18 @@ class AdminView extends GetView<AdminController> {
                                                                             context) =>
                                                                         <PopupMenuEntry<
                                                                             String>>[
-                                                                      const PopupMenuItem<
+                                                                      PopupMenuItem<
                                                                           String>(
                                                                         value:
                                                                             'print',
                                                                         child:
                                                                             Row(
                                                                           children: [
-                                                                            Icon(Icons.print_rounded),
+                                                                            const Icon(Icons.print_rounded),
                                                                             Padding(
-                                                                              padding: EdgeInsets.only(left: 6),
+                                                                              padding: const EdgeInsets.only(left: 6),
                                                                               child: AppText(
-                                                                                text: 'Reprint',
+                                                                                text: 'reprint'.tr,
                                                                                 fontWeight: FontWeight.normal,
                                                                                 fontSize: 12,
                                                                               ),
@@ -1978,7 +2088,7 @@ class AdminView extends GetView<AdminController> {
                                                                             Padding(
                                                                               padding: const EdgeInsets.only(left: 6),
                                                                               child: AppText(
-                                                                                text: QueueStatus.served.label,
+                                                                                text: QueueStatus.served.label.tr,
                                                                                 fontWeight: FontWeight.normal,
                                                                                 fontSize: 12,
                                                                                 color: AppColors.confirm,
@@ -2001,7 +2111,7 @@ class AdminView extends GetView<AdminController> {
                                                                             Padding(
                                                                               padding: const EdgeInsets.only(left: 6),
                                                                               child: AppText(
-                                                                                text: QueueStatus.voided.label,
+                                                                                text: QueueStatus.voided.label.tr,
                                                                                 fontWeight: FontWeight.normal,
                                                                                 fontSize: 12,
                                                                                 color: AppColors.red,
@@ -2029,13 +2139,10 @@ class AdminView extends GetView<AdminController> {
                                                   .value = pageNumber;
                                               controller.apiQueueDetailList();
                                             },
-                                            threshold: 8,
-                                            pageTotal:
+                                            totalPages:
                                                 controller.pageTotal.value,
-                                            pageInit: controller
+                                            currentPage: controller
                                                 .selectedPageNumber.value,
-                                            colorPrimary: AppColors.black,
-                                            colorSub: Colors.white,
                                           ),
                                         ),
                                       ),
@@ -2055,18 +2162,18 @@ class AdminView extends GetView<AdminController> {
                                   },
                                 ),
                               ),
-                              const Positioned(
+                              Positioned(
                                   left: 20,
                                   top: 10,
                                   child: AppText(
-                                    text: 'All Queues',
+                                    text: 'all_queue'.tr,
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.blackCalm,
                                   )),
                               Positioned(
                                   right: 10,
-                                  bottom: 55,
+                                  bottom: 30,
                                   child: Row(
                                     children: [
                                       const AppText(

@@ -19,6 +19,10 @@ class ConfigController extends GetxController {
   final TextEditingController pathText = TextEditingController();
   final TextEditingController rtoText = TextEditingController();
   RxString error = ''.obs;
+  var fullscreenTimerSelected = 2.obs;
+  var adsMutedStatus = true.obs;
+  var autoFullscreenStatus = true.obs;
+  List<int> items = [1, 2, 5, 10];
   final storage = const FlutterSecureStorage();
   final adminController = Get.find<AdminController>();
   var isLoading = false.obs;
@@ -28,14 +32,23 @@ class ConfigController extends GetxController {
     getBaseUrl();
   }
 
+  // Fungsi untuk mengubah item yang dipilih
+  void setSelected(int value) {
+    fullscreenTimerSelected.value = value;
+  }
+
   Future<void> getBaseUrl() async {
     isLoading(true);
     final url = await SecureStorage().getUrl();
     final key = await SecureStorage().getKey();
-    final title = await  storage.read(key: 'env_title');
-    final label = await  storage.read(key: 'env_label');
-    final videoPath = await  storage.read(key: 'env_path');
-    final rto = await  storage.read(key: 'rto');
+    final title = await storage.read(key: 'env_title');
+    final label = await storage.read(key: 'env_label');
+    final videoPath = await storage.read(key: 'env_path');
+    final rto = await storage.read(key: 'rto');
+    final autoFullscreen = await storage.read(key: 'auto_fullscreen');
+    final autoFullscreenTimer =
+        await storage.read(key: 'auto_fullscreen_timer');
+    final adsMuted = await storage.read(key: 'ads_muted');
 
     if (url != null) {
       urlController.text = url;
@@ -55,10 +68,20 @@ class ConfigController extends GetxController {
     if (url != null) {
       pathText.text = videoPath!;
     }
+    if (autoFullscreenTimer != null) {
+      fullscreenTimerSelected.value = int.parse(autoFullscreenTimer);
+    }
+    if (adsMuted != null) {
+      adsMutedStatus.value = adsMuted == '1' ? true : false;
+    }
+    if (autoFullscreen != null) {
+      autoFullscreenStatus.value = autoFullscreen == '1' ? true : false;
+    }
     isLoading(false);
   }
 
   void setError(String value) => error.value = value;
+
   void costumerEnv() async {
     await storage.delete(key: 'env_title');
     await storage.delete(key: 'env_label');
@@ -66,14 +89,23 @@ class ConfigController extends GetxController {
     await storage.write(key: 'env_label', value: labelText.text);
     await storage.write(key: 'rto', value: rtoText.text);
     adminController.updateCallText();
-    AppDialog.showToastSuccess(title: "Success", desc: '', func: () {});
+    AppDialog.showToastSuccess(title: 'success'.tr, desc: '', func: () {});
   }
 
   void videoEnv() async {
     await storage.delete(key: 'env_path');
     await storage.write(key: 'env_path', value: pathText.text);
-    adminController.updatePathVideo();
-    AppDialog.showToastSuccess(title: "Success", desc: '', func: () {});
+    await storage.delete(key: 'auto_fullscreen_timer');
+    await storage.write(
+        key: 'auto_fullscreen_timer',
+        value: fullscreenTimerSelected.value.toString());
+    await storage.write(
+        key: 'auto_fullscreen',
+        value: autoFullscreenStatus.value == true ? '1' : '0');
+    videoAdsMuted();
+    await adminController.updatePathVideo();
+    await adminController.doFullscreen();
+    AppDialog.showToastSuccess(title: 'success'.tr, desc: '', func: () {});
   }
 
   void registerLicense() {
@@ -92,8 +124,8 @@ class ConfigController extends GetxController {
       await storage.write(key: 'rto', value: rtoText.text);
       await BaseApiServices.initializeBaseUrl();
       AppDialog.showToastSuccess(
-          title: 'Success!',
-          desc: 'Environment has been updated!',
+          title: 'success'.tr,
+          desc: 'environment_updated'.tr,
           func: () async {
             await const FlutterSecureStorage().delete(key: 'shift_date');
             Get.back();
@@ -106,8 +138,8 @@ class ConfigController extends GetxController {
           " Failled to register license config API ${error.toString()}");
       if (error.value == 'Unauthorized') {
         AppDialog.showToastInfo(
-            title: 'Invalid license key!',
-            desc: 'Please enter a valid license key.',
+            title: 'invalid_license_key'.tr,
+            desc: 'invalid_license_key_desc'.tr,
             func: () {});
       } else if (error.value == 'Forbidden') {
         await storage.delete(key: 'base_url');
@@ -116,8 +148,8 @@ class ConfigController extends GetxController {
         await storage.write(key: 'key', value: keyController.text);
         await BaseApiServices.initializeBaseUrl();
         AppDialog.showToastSuccess(
-            title: 'Success!',
-            desc: 'Environment has been updated!',
+            title: 'success'.tr,
+            desc: 'environment_updated'.tr,
             func: () async {
               await const FlutterSecureStorage().delete(key: 'shift_date');
               Get.back();
@@ -125,8 +157,26 @@ class ConfigController extends GetxController {
             });
       } else {
         AppDialog.showToastError(
-            title: 'Not Found!', desc: " Server not found", func: () {});
+            title: 'not_found'.tr, desc: "server_not_found".tr, func: () {});
       }
     });
   }
+
+  void toggleCron(bool cronRunning) async {
+    adminController.isCronRunning.value = cronRunning;
+    if (!cronRunning) {
+      adminController.cron.close();
+    }
+  }
+
+  void toggleAutoFullscreen(bool autoFullscreen) async {
+    autoFullscreenStatus.value = autoFullscreen;
+  }
+
+  void videoAdsMuted() async {
+    await storage.delete(key: 'ads_muted');
+    await storage.write(
+        key: 'ads_muted', value: adsMutedStatus.value == true ? '1' : '0');
+  }
+  
 }

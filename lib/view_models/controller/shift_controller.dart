@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:queue_system/models/end_shift.dart';
 import 'package:queue_system/models/shift.dart';
 import 'package:queue_system/repository/shift_repository.dart';
 import 'package:queue_system/utils/constan.dart';
 import 'package:queue_system/utils/enum/queue_status.dart';
-import 'package:queue_system/utils/log.dart';
 import 'package:queue_system/view_models/controller/admin_controller.dart';
 import 'package:queue_system/widget/app_dialog.dart';
 
 class ShiftController extends GetxController {
   var detailButton = false.obs;
   final adminController = Get.put(AdminController());
-  final LogApp _logApp = LogApp();
   final shiftDetailPrint = <QueueData>[].obs;
   final _apiShift = ShiftRepository();
   var selectedCard = ''.obs;
@@ -59,10 +58,7 @@ class ShiftController extends GetxController {
     }).onError((error, stackTrace) async {
       isLoading(false);
       buttonRefresh.value = true;
-      await _logApp.writeLog(" Failed to get shift API ${error.toString()}");
-
-      await _logApp.sendSlackLog(adminController.branch.value.fullName!,
-          "Failed to get shift API ${error.toString()}");
+      adminController.logCase(error.toString(), 'Failed to get shift API');
     });
   }
 
@@ -74,8 +70,8 @@ class ShiftController extends GetxController {
       adminController.error.value = '';
       const FlutterSecureStorage storage = FlutterSecureStorage();
       await AppDialog.showToastSuccess(
-        title: 'Success!',
-        desc: 'New shift has been created',
+        title: 'success'.tr,
+        desc: 'new_shift_desc'.tr,
         func: () async {
           DateTime now = DateTime.now();
           String dateDay = DateFormat('yyyy-MM-dd').format(now);
@@ -85,19 +81,18 @@ class ShiftController extends GetxController {
           }
           await storage.write(key: 'shift_date', value: dateDay);
           await adminController.updateQueueListApi();
+          await adminController.updateQueueSecondaryWindows();
           Get.back();
         },
       );
     }).onError((error, stackTrace) async {
       isLoading(false);
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc: 'Unable to create new shift. Please try again',
+        title: 'failed'.tr,
+        desc: 'failed_create_shift'.tr,
         func: () async {
-          await _logApp
-              .writeLog(" Failed to create new shift API ${error.toString()}");
-          await _logApp.sendSlackLog(adminController.branch.value.fullName!,
-              "Failed to create new shift API ${error.toString()}");
+          adminController.logCase(
+              error.toString(), 'Failed to create new shift API');
         },
       );
     });
@@ -105,11 +100,10 @@ class ShiftController extends GetxController {
 
   void endShiftDialog() {
     AppDialog.confirmationMsg(
-      title: "End Shift",
-      message: "Are you sure want to end this shift?",
+      title: "end_shift".tr,
+      message: "sure_end_shift".tr,
       function: () async {
         await endShift();
-
         final shift =
             await const FlutterSecureStorage().read(key: 'shift_date');
         if (shift != null) {
@@ -124,8 +118,8 @@ class ShiftController extends GetxController {
 
   void newShiftDialog() {
     AppDialog.confirmationMsg(
-      title: "Create New Shift",
-      message: "Are you sure want to create new shift?",
+      title: "new_shift".tr,
+      message: "sure_new_shift".tr,
       function: () async {
         await newShift();
         Get.back();
@@ -187,8 +181,8 @@ class ShiftController extends GetxController {
         statusCount,
       );
     } catch (error) {
-      await _logApp
-          .writeLog("Failed to get Detail Shift End API: ${error.toString()}");
+      adminController.logCase(
+          error.toString(), 'Failed to get Detail Shift End API');
     }
   }
 
@@ -196,29 +190,43 @@ class ShiftController extends GetxController {
     isLoading(true);
     _apiShift.endShift().then((value) async {
       isLoading(false);
-      final uuid = value['data']['shift']['id'];
+
       await AppDialog.showToastSuccess(
-        title: 'Success!',
-        desc: 'Shift has been ended!',
+        title: 'success'.tr,
+        desc: 'success_end_shift'.tr,
         func: () async {
           Get.back();
+
+          if (value['data']['shift']['shiftData'] != null) {
+            ShiftDetails data =
+                ShiftDetails.fromJson(value['data']['shift']['shiftData']);
+            await adminController.printer.printEndDetailShift(
+              value['data']['shift']['branch']['fullName'],
+              formatDateTime(value['data']['shift']['startedAt']['date']),
+              formatDateTime(value['data']['shift']['endedAt']['date']),
+              data,
+            );
+          }
+          await adminController.clearQueueSecondaryWindows();
           await adminController.updateQueueListApi();
           await const FlutterSecureStorage().delete(key: 'shift_date');
-          await getDetailShiftEnd(uuid);
-          await adminController.updateQueueSecondaryWindows();
           adminController.doFullscreen();
         },
       );
     }).onError((error, stackTrace) async {
       isLoading(false);
+      // Default message
+      String errorMessage = 'failed_end_shift'.tr;
+
+      // Check if error contains a specific value
+      if (error.toString().contains('shift_id')) {
+        errorMessage = 'failed_active_queue_end_shift'.tr;
+      }
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc: 'Unable to end shift. Please try again',
+        title: 'failed'.tr,
+        desc: errorMessage,
         func: () async {
-          await _logApp
-              .writeLog(" Failed to end shift API ${error.toString()}");
-          await _logApp.sendSlackLog(adminController.branch.value.fullName!,
-              "Failed to end shift API ${error.toString()}");
+          adminController.logCase(error.toString(), 'Failed to end shift API');
         },
       );
     });
@@ -290,10 +298,8 @@ class ShiftController extends GetxController {
       (error, stackTrace) async {
         isLoadingDetail(false);
         isGetDetailError(true);
-        await _logApp
-            .writeLog(" Failed to detail get shift API ${error.toString()}");
-        await _logApp.sendSlackLog(adminController.branch.value.fullName!,
-            "Failed to detail get shift API ${error.toString()}");
+        adminController.logCase(
+            error.toString(), 'Failed to detail get shift API');
       },
     );
   }

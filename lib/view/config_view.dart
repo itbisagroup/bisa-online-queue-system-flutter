@@ -14,8 +14,8 @@ class ConfigView extends GetView<ConfigController> {
     Get.put(ConfigController());
     return Scaffold(
         appBar: AppBar(
-          title: const AppText(
-            text: 'Configuration',
+          title: AppText(
+            text: 'config'.tr,
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: AppColors.black,
@@ -37,15 +37,16 @@ class ConfigView extends GetView<ConfigController> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(
-                              FontAwesomeIcons.gear,
+                            const Icon(
+                              Icons.wifi_tethering,
                               size: 30,
                               color: AppColors.maroon,
                             ),
+                            const SizedBox(width: 10),
                             AppText(
-                              text: ' ENVIRONMENT CONFIGURATION',
+                              text: 'connection'.tr,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: AppColors.maroon,
@@ -53,7 +54,7 @@ class ConfigView extends GetView<ConfigController> {
                           ],
                         ),
                         const SizedBox(
-                          height: 30,
+                          height: 20,
                         ),
                         Form(
                           key: controller.gKfS,
@@ -61,8 +62,8 @@ class ConfigView extends GetView<ConfigController> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const AppText(
-                                  text: "Base Url",
+                              AppText(
+                                  text: "base_url".tr,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: AppColors.maroon),
@@ -75,17 +76,17 @@ class ConfigView extends GetView<ConfigController> {
                                   letterSpacing: 1,
                                   wordSpacing: 1,
                                 ),
-                                decoration: const InputDecoration(
-                                  hintText: 'exm: https://example.com',
-                                  hintStyle: TextStyle(
+                                decoration: InputDecoration(
+                                  hintText: '${'exm'.tr}: https://example.com',
+                                  hintStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
                                     wordSpacing: 1,
                                     fontStyle: FontStyle.italic,
                                   ),
-                                  border: OutlineInputBorder(),
-                                  labelStyle: TextStyle(
+                                  border: const OutlineInputBorder(),
+                                  labelStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
@@ -94,7 +95,7 @@ class ConfigView extends GetView<ConfigController> {
                                 ),
                                 validator: (val) {
                                   if (val!.trim().isEmpty) {
-                                    return "🔴 Base url still empty";
+                                    return "🔴 ${'input_url'.tr}";
                                   }
                                   return null;
                                 },
@@ -102,8 +103,8 @@ class ConfigView extends GetView<ConfigController> {
                               const SizedBox(
                                 height: 10,
                               ),
-                              const AppText(
-                                  text: "License Key",
+                              AppText(
+                                  text: 'license_key'.tr,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: AppColors.maroon),
@@ -116,17 +117,17 @@ class ConfigView extends GetView<ConfigController> {
                                   letterSpacing: 1,
                                   wordSpacing: 1,
                                 ),
-                                decoration: const InputDecoration(
-                                  hintText: 'exm: sxxx:xxxxxxxxxx',
-                                  hintStyle: TextStyle(
+                                decoration: InputDecoration(
+                                  hintText: '${'exm'.tr}: sxxx:xxxxxxxxxx',
+                                  hintStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
                                     wordSpacing: 1,
                                     fontStyle: FontStyle.italic,
                                   ),
-                                  border: OutlineInputBorder(),
-                                  labelStyle: TextStyle(
+                                  border: const OutlineInputBorder(),
+                                  labelStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
@@ -135,7 +136,7 @@ class ConfigView extends GetView<ConfigController> {
                                 ),
                                 validator: (val) {
                                   if (val!.trim().isEmpty) {
-                                    return "🔴 Key still empty";
+                                    return "🔴 ${'input_url'.tr}";
                                   }
                                   return null;
                                 },
@@ -143,8 +144,8 @@ class ConfigView extends GetView<ConfigController> {
                               const SizedBox(
                                 height: 10,
                               ),
-                              const AppText(
-                                  text: "Request Time Out",
+                              AppText(
+                                  text: "rto_title".tr,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: AppColors.maroon),
@@ -160,17 +161,18 @@ class ConfigView extends GetView<ConfigController> {
                                   letterSpacing: 1,
                                   wordSpacing: 1,
                                 ),
-                                decoration: const InputDecoration(
-                                  hintText: 'exm: 20 (in second)',
-                                  hintStyle: TextStyle(
+                                decoration: InputDecoration(
+                                  hintText:
+                                      '${'exm'.tr}: 20 (${'in_second'.tr})',
+                                  hintStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
                                     wordSpacing: 1,
                                     fontStyle: FontStyle.italic,
                                   ),
-                                  border: OutlineInputBorder(),
-                                  labelStyle: TextStyle(
+                                  border: const OutlineInputBorder(),
+                                  labelStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
@@ -179,7 +181,7 @@ class ConfigView extends GetView<ConfigController> {
                                 ),
                                 validator: (val) {
                                   if (val!.trim().isEmpty) {
-                                    return "🔴 rto still empty";
+                                    return "🔴 ${'input_rto'.tr}";
                                   }
                                   return null;
                                 },
@@ -199,18 +201,18 @@ class ConfigView extends GetView<ConfigController> {
                             onPressed: () {
                               controller.registerLicense();
                             },
-                            child: const Row(
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.edit_document,
                                   color: AppColors.white,
                                   size: 30,
                                 ),
-                                SizedBox(width: 10),
+                                const SizedBox(width: 10),
                                 AppText(
-                                  text: 'Save Configuration',
+                                  text: 'save_config'.tr,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.white,
                                   fontSize: 14,
@@ -233,15 +235,16 @@ class ConfigView extends GetView<ConfigController> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.screenshot_monitor,
                               size: 30,
                               color: AppColors.maroon,
                             ),
+                            const SizedBox(width: 10),
                             AppText(
-                              text: ' CUSTOMER VIEW CONFIGURATION',
+                              text: 'customer_screen'.tr,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: AppColors.maroon,
@@ -249,15 +252,15 @@ class ConfigView extends GetView<ConfigController> {
                           ],
                         ),
                         const SizedBox(
-                          height: 30,
+                          height: 20,
                         ),
                         Form(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const AppText(
-                                  text: "Title",
+                              AppText(
+                                  text: "title_call_queue_text".tr,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: AppColors.maroon),
@@ -269,17 +272,17 @@ class ConfigView extends GetView<ConfigController> {
                                   letterSpacing: 1,
                                   wordSpacing: 1,
                                 ),
-                                decoration: const InputDecoration(
-                                  hintText: 'exm: Queue Number',
-                                  hintStyle: TextStyle(
+                                decoration: InputDecoration(
+                                  hintText: ' ${'exm'.tr} ${'queue_number'.tr}',
+                                  hintStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
                                     wordSpacing: 1,
                                     fontStyle: FontStyle.italic,
                                   ),
-                                  border: OutlineInputBorder(),
-                                  labelStyle: TextStyle(
+                                  border: const OutlineInputBorder(),
+                                  labelStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
@@ -288,7 +291,7 @@ class ConfigView extends GetView<ConfigController> {
                                 ),
                                 validator: (val) {
                                   if (val!.trim().isEmpty) {
-                                    return "🔴 Base url still empty";
+                                    return "🔴 ${'empty_input'.tr}";
                                   }
                                   return null;
                                 },
@@ -296,8 +299,8 @@ class ConfigView extends GetView<ConfigController> {
                               const SizedBox(
                                 height: 10,
                               ),
-                              const AppText(
-                                  text: "Label Calling Text",
+                              AppText(
+                                  text: "instruction_call_queue_text".tr,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: AppColors.maroon),
@@ -309,17 +312,18 @@ class ConfigView extends GetView<ConfigController> {
                                   letterSpacing: 1,
                                   wordSpacing: 1,
                                 ),
-                                decoration: const InputDecoration(
-                                  hintText: 'exm: Please Confirm to Greeter',
-                                  hintStyle: TextStyle(
+                                decoration: InputDecoration(
+                                  hintText:
+                                      '${'exm'.tr} ${'exm_instruction'.tr} ',
+                                  hintStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
                                     wordSpacing: 1,
                                     fontStyle: FontStyle.italic,
                                   ),
-                                  border: OutlineInputBorder(),
-                                  labelStyle: TextStyle(
+                                  border: const OutlineInputBorder(),
+                                  labelStyle: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                     letterSpacing: 1,
@@ -328,7 +332,7 @@ class ConfigView extends GetView<ConfigController> {
                                 ),
                                 validator: (val) {
                                   if (val!.trim().isEmpty) {
-                                    return "🔴 Base url still empty";
+                                    return "🔴 ${'empty_input'.tr}";
                                   }
                                   return null;
                                 },
@@ -348,18 +352,18 @@ class ConfigView extends GetView<ConfigController> {
                             onPressed: () {
                               controller.costumerEnv();
                             },
-                            child: const Row(
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.edit_document,
                                   color: AppColors.white,
                                   size: 30,
                                 ),
-                                SizedBox(width: 10),
+                                const SizedBox(width: 10),
                                 AppText(
-                                  text: 'Save Configuration',
+                                  text: 'save_config'.tr,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.white,
                                   fontSize: 14,
@@ -381,16 +385,18 @@ class ConfigView extends GetView<ConfigController> {
                     width: 450,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.view_carousel,
                               size: 30,
                               color: AppColors.maroon,
                             ),
+                            const SizedBox(width: 10),
                             AppText(
-                              text: ' VIDEO CONFIGURATION',
+                              text: 'video_config'.tr,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: AppColors.maroon,
@@ -398,55 +404,132 @@ class ConfigView extends GetView<ConfigController> {
                           ],
                         ),
                         const SizedBox(
-                          height: 30,
+                          height: 20,
                         ),
                         Form(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const AppText(
-                                  text: "Path",
+                              AppText(
+                                  text: "path".tr,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                   color: AppColors.maroon),
-                              TextFormField(
-                                controller: controller.pathText,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  letterSpacing: 1,
-                                  wordSpacing: 1,
-                                ),
-                                decoration: const InputDecoration(
-                                  hintText: 'exm: d:/video/',
-                                  hintStyle: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    letterSpacing: 1,
-                                    wordSpacing: 1,
-                                    fontStyle: FontStyle.italic,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: controller.pathText,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        letterSpacing: 1,
+                                        wordSpacing: 1,
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: '${'exm'.tr} d:/video/',
+                                        hintStyle: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          letterSpacing: 1,
+                                          wordSpacing: 1,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        border: const OutlineInputBorder(),
+                                        labelStyle: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          letterSpacing: 1,
+                                          wordSpacing: 1,
+                                        ),
+                                      ),
+                                      validator: (val) {
+                                        if (val!.trim().isEmpty) {
+                                          return "🔴 ${'empty_input'.tr}";
+                                        }
+                                        return null;
+                                      },
+                                    ),
                                   ),
-                                  border: OutlineInputBorder(),
-                                  labelStyle: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    letterSpacing: 1,
-                                    wordSpacing: 1,
-                                  ),
-                                ),
-                                validator: (val) {
-                                  if (val!.trim().isEmpty) {
-                                    return "🔴 Video path still empty";
-                                  }
-                                  return null;
-                                },
+                                  IconButton(
+                                      onPressed:
+                                          controller.adminController.download,
+                                      icon: const Icon(Icons.download)),
+                                ],
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(
-                          height: 30,
+                          height: 10,
+                        ),
+                        AppText(
+                            text: "muted_video".tr,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: AppColors.maroon),
+                        Obx(
+                          () => Switch(
+                            value: controller.adsMutedStatus.value,
+                            onChanged: (value) {
+                              controller.adsMutedStatus.value = value;
+                            },
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 10,
+                        ),
+                        AppText(
+                            text: "auto_fullscreen".tr,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: AppColors.maroon),
+                        Obx(
+                          () => Switch(
+                            value: controller.autoFullscreenStatus.value,
+                            onChanged: (value) {
+                              controller.toggleAutoFullscreen(value);
+                            },
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 10,
+                        ),
+                        Obx(
+                          () => Visibility(
+                            visible: controller.autoFullscreenStatus.value,
+                            child: AppText(
+                                text: "timer_fulscreen".tr,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppColors.maroon),
+                          ),
+                        ),
+                        Obx(() {
+                          return Visibility(
+                            visible: controller.autoFullscreenStatus.value,
+                            child: DropdownButton<int>(
+                              value: controller.fullscreenTimerSelected.value,
+                              hint: AppText(
+                                text: 'hint_timer_fulscreen'.tr,
+                              ),
+                              items: controller.items.map((int value) {
+                                return DropdownMenuItem<int>(
+                                  value: value,
+                                  child: AppText(
+                                    text: '$value ${'minute'.tr}',
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (int? newValue) {
+                                controller.setSelected(newValue!);
+                              },
+                            ),
+                          );
+                        }),
+                        const SizedBox(
+                          height: 20,
                         ),
                         SizedBox(
                           width: double.infinity,
@@ -457,18 +540,18 @@ class ConfigView extends GetView<ConfigController> {
                             onPressed: () {
                               controller.videoEnv();
                             },
-                            child: const Row(
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.edit_document,
                                   color: AppColors.white,
                                   size: 30,
                                 ),
-                                SizedBox(width: 10),
+                                const SizedBox(width: 10),
                                 AppText(
-                                  text: 'Save Configuration',
+                                  text: 'save_config'.tr,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.white,
                                   fontSize: 14,
@@ -479,6 +562,208 @@ class ConfigView extends GetView<ConfigController> {
                         ),
                       ],
                     ),
+                  ),
+                ),
+                Card(
+                  elevation: 20,
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    color: AppColors.white,
+                    height: 450,
+                    width: 450,
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                FontAwesomeIcons.flag,
+                                size: 30,
+                                color: AppColors.maroon,
+                              ),
+                              const SizedBox(width: 10),
+                              AppText(
+                                text: 'language'.tr,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppColors.maroon,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(
+                            height: 20,
+                          ),
+                          AppText(
+                              text: "choose_language".tr,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppColors.maroon),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          Obx(
+                            () => Wrap(
+                              runSpacing: 8,
+                              spacing: 8,
+                              alignment: WrapAlignment.center,
+                              runAlignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                ChoiceChip(
+                                  label: const AppText(
+                                    text: 'EN',
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.black,
+                                  ),
+                                  avatar: Image.asset('assets/images/us.png'),
+                                  selected: controller
+                                      .adminController.isEnglishApp.value,
+                                  backgroundColor: AppColors.white,
+                                  selectedColor: AppColors.pink,
+                                  elevation: 4.0,
+                                  side: const BorderSide(
+                                      color: Colors.transparent),
+                                  onSelected: (selected) {
+                                    // Disable jika sudah aktif
+                                    if (!controller
+                                        .adminController.isEnglishApp.value) {
+                                      controller.adminController.lang();
+                                    }
+                                  },
+                                  showCheckmark: false,
+                                ),
+                                ChoiceChip(
+                                  label: const AppText(
+                                    text: 'ID',
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.black,
+                                  ),
+                                  avatar: Image.asset('assets/images/id.png'),
+                                  selected: !controller
+                                      .adminController.isEnglishApp.value,
+                                  selectedColor: AppColors.pink,
+                                  backgroundColor: AppColors.white,
+                                  elevation: 4.0,
+                                  side: const BorderSide(
+                                      color: Colors.transparent),
+                                  onSelected: (selected) {
+                                    // Disable jika sudah aktif
+                                    if (controller
+                                        .adminController.isEnglishApp.value) {
+                                      controller.adminController.lang();
+                                    }
+                                  },
+                                  showCheckmark: false,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 20,
+                          ),
+                          AppText(
+                              text: "language_print".tr,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppColors.maroon),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          Obx(
+                            () => Wrap(
+                              runSpacing: 8,
+                              spacing: 8,
+                              alignment: WrapAlignment.center,
+                              runAlignment: WrapAlignment.center,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                ChoiceChip(
+                                  label: const AppText(
+                                    text: 'EN',
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.black,
+                                  ),
+                                  avatar: Image.asset('assets/images/us.png'),
+                                  selected: controller
+                                      .adminController.isEnglishPrinter.value,
+                                  backgroundColor: AppColors.white,
+                                  selectedColor: AppColors.pink,
+                                  elevation: 4.0,
+                                  side: const BorderSide(
+                                      color: Colors.transparent),
+                                  onSelected: (selected) {
+                                    // Disable jika sudah aktif
+                                    if (!controller.adminController
+                                        .isEnglishPrinter.value) {
+                                      controller.adminController.langPrinter();
+                                    }
+                                  },
+                                  showCheckmark: false,
+                                ),
+                                ChoiceChip(
+                                  label: const AppText(
+                                    text: 'ID',
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.black,
+                                  ),
+                                  avatar: Image.asset('assets/images/id.png'),
+                                  selected: !controller
+                                      .adminController.isEnglishPrinter.value,
+                                  selectedColor: AppColors.pink,
+                                  backgroundColor: AppColors.white,
+                                  elevation: 4.0,
+                                  side: const BorderSide(
+                                      color: Colors.transparent),
+                                  onSelected: (selected) {
+                                    // Disable jika sudah aktif
+                                    if (controller.adminController
+                                        .isEnglishPrinter.value) {
+                                      controller.adminController.langPrinter();
+                                    }
+                                  },
+                                  showCheckmark: false,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 30,
+                          ),
+                          Row(
+                            children: [
+                              const Icon(
+                                FontAwesomeIcons.gears,
+                                size: 30,
+                                color: AppColors.maroon,
+                              ),
+                              const SizedBox(width: 20),
+                              AppText(
+                                text: 'more_config'.tr,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: AppColors.maroon,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(
+                            height: 20,
+                          ),
+                          AppText(
+                              text: "cron_run".tr,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppColors.maroon),
+                          Obx(
+                            () => Switch(
+                              value: controller
+                                  .adminController.isCronRunning.value,
+                              onChanged: (value) {
+                                controller.toggleCron(value);
+                              },
+                            ),
+                          ),
+                        ]),
                   ),
                 ),
               ],

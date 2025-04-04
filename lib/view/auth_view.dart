@@ -22,7 +22,11 @@ class AuthView extends GetView<AuthController> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Image.asset('assets/images/logo.png', height: 150,width: 150,),
+              Image.asset(
+                'assets/images/logo.png',
+                height: 150,
+                width: 150,
+              ),
               const AppText(
                 text: 'BISA ONLINE QUEUE SYSTEM',
                 fontWeight: FontWeight.bold,
@@ -60,12 +64,14 @@ class AuthView extends GetView<AuthController> {
                           labelText: 'Server API'),
                       validator: (val) {
                         if (val!.trim().isEmpty) {
-                          return "🔴 Server API'), still empty";
+                          return "🔴 ${'input_url'.tr}";
                         }
                         return null;
                       },
                     ),
-                  const SizedBox(height: 10 ,),
+                    const SizedBox(
+                      height: 10,
+                    ),
                     TextFormField(
                       controller: controller.keyController,
                       style: const TextStyle(
@@ -93,7 +99,7 @@ class AuthView extends GetView<AuthController> {
                           labelText: 'License Key'),
                       validator: (val) {
                         if (val!.trim().isEmpty) {
-                          return "🔴 Key still empty";
+                          return "🔴 ${'input_key'.tr}";
                         }
                         return null;
                       },
@@ -107,19 +113,19 @@ class AuthView extends GetView<AuthController> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.maroon),
-                  onPressed:controller.registerLicense,
-                  child: const Row(
+                  onPressed: controller.registerLicense,
+                  child:  Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.login,
                         color: AppColors.white,
                         size: 30,
                       ),
-                      SizedBox(width: 3),
+                      const SizedBox(width: 3),
                       AppText(
-                        text: 'Submit',
+                        text: 'submit'.tr,
                         fontWeight: FontWeight.bold,
                         color: AppColors.white,
                         fontSize: 14,

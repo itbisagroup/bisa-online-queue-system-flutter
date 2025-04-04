@@ -56,36 +56,30 @@ class Withhold {
     this.queueQty,
   });
 
-  factory Withhold.fromJson(Map<String, dynamic> json) {
+  // Parse a list of Withhold entries for each Pax ID
+  static List<Withhold> listFromJson(Map<String, dynamic> json) {
     final String id = json.keys.first;
     final List<dynamic>? queueDataList = json[id];
     if (queueDataList != null && queueDataList.isNotEmpty) {
-      final Map<String, dynamic> queueData = queueDataList.first;
-      final String? queueNumber = queueData['queueNumber'];
-      final String? queueCode = queueData['id'];
-      final int? callCount = queueData['callCount'];
-      final int? queueQty = queueData['queueQty'];
-
-      return Withhold(
-        id: id,
-        queueNumber: queueNumber,
-        queueCode: queueCode,
-        callCount: callCount,
-        queueQty: queueQty,
-      );
+      return queueDataList.map((queueData) {
+        return Withhold(
+          id: id,
+          queueNumber: queueData['queueNumber'],
+          queueCode: queueData['id'],
+          callCount: queueData['callCount'],
+          queueQty: queueData['queueQty'],
+        );
+      }).toList();
     } else {
-      final String id = json.keys.first;
-      const String queueNumber = "0000";
-      const String queueCode = '0';
-      const int callCount = 0;
-      const int queueQty = 0;
-      return Withhold(
-        id: id,
-        queueNumber: queueNumber,
-        queueCode: queueCode,
-        callCount: callCount,
-        queueQty: queueQty,
-      );
+      return [
+        Withhold(
+          id: id,
+          queueNumber: "0000",
+          queueCode: '0',
+          callCount: 0,
+          queueQty: 0,
+        )
+      ];
     }
   }
 }
@@ -116,7 +110,7 @@ class StatusQueue {
 class PaxWithQueue {
   final Pax? pax;
   final Queue? queue;
-  final Withhold? withhold;
+  final List<Withhold>? withhold;
 
   PaxWithQueue({
     this.pax,

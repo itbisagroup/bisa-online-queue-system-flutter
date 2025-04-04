@@ -8,17 +8,17 @@ import 'package:flutter/material.dart' hide BoxDecoration, BoxShadow;
 import 'package:flutter/services.dart';
 import 'package:flutter_inset_shadow/flutter_inset_shadow.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:queue_system/utils/audio_player.dart';
 import 'package:queue_system/utils/constan.dart';
 import 'package:queue_system/utils/log.dart';
+import 'package:queue_system/widget/app_loading.dart';
 
 import 'package:queue_system/widget/app_text.dart';
+import 'package:queue_system/widget/box_queue.dart';
 import 'package:sizer/sizer.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_player_control_panel/video_player_control_panel.dart';
-import 'package:widget_and_text_animator/widget_and_text_animator.dart';
 import 'package:window_manager/window_manager.dart';
 
 class SecondaryWindow extends StatefulWidget {
@@ -31,14 +31,53 @@ class SecondaryWindow extends StatefulWidget {
 }
 
 class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
-  List<String> dataList = ['-', '-', '-', '-', '-', '-', '-', '-'];
-  List<String> nextQueueList = ['-', '-', '-', '-', '-', '-', '-', '-'];
+  List<String> dataList = [
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-'
+  ];
+  List<String> nextQueueList = [
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-',
+    '-'
+  ];
+  List<String> expiredList = [];
   Map<String, Map<String, String>> resultMap = {};
   List<String> ads = ['novideo'];
   final AudioPlayerWav audioPlayer = AudioPlayerWav();
   final LogApp _logApp = LogApp();
   String fullName = '';
   String tittleCall = '';
+  bool isLoading = true;
+  bool adsVideoMuted = false;
+  int delayedFullscreenTimer = 1;
+  int delayedFullscreenStart = 0;
   String labelCall = '';
   String pathVideo = '';
   String brand = '';
@@ -47,15 +86,16 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
   String address = '';
   String city = '';
   String province = '';
+  String lang = 'id';
   VideoPlayerController? controller;
   Future<void>? _initializeVideoPlayerFuture;
   int nowPlayIndex = 0;
   String logo = '';
   bool playAds = false;
   bool doFullscreen = true;
+  bool isAutoFullscreen = true;
   Timer? _fullscreenTimer;
-  static const Duration initialDelay = Duration(minutes: 2);
-  static const Duration additionalDelay = Duration(minutes: 2);
+
   int maxCall = 0;
   int callCount = 0;
   late Stream<String> _dateTimeStream;
@@ -73,8 +113,20 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
       List<dynamic> jsonList = jsonDecode(call.arguments as String);
       setState(() {
         nextQueueList = List<String>.from(jsonList);
-        
         _updateResultMap();
+      });
+    }
+    if (call.method.toString() == "endShift") {
+      setState(() {
+        resetMapValues(resultMap);
+      });
+    }
+
+    if (call.method.toString() == "withholdQueue") {
+      List<dynamic> jsonList = jsonDecode(call.arguments as String);
+      setState(() {
+        expiredList.clear();
+        expiredList = List<String>.from(jsonList);
       });
     }
     if (call.method.toString() == "updateAds") {
@@ -88,6 +140,12 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
       String jsonMap = jsonDecode(call.arguments as String);
       setState(() {
         fullName = jsonMap;
+      });
+    }
+    if (call.method.toString() == "lang") {
+      String language = jsonDecode(call.arguments as String);
+      setState(() {
+        lang = language;
       });
     }
     if (call.method.toString() == "updateBrand") {
@@ -146,25 +204,27 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
         maxCall = jsonMap;
       });
     }
+    if (call.method.toString() == "maxCallQueue") {
+      int jsonMap = jsonDecode(call.arguments as String);
+      setState(() {
+        maxCall = jsonMap;
+      });
+    }
     if (call.method.toString() == "doFullscreen") {
-      if (playAds) {
+      if (playAds && isAutoFullscreen) {
         setState(() {
           _dateTimeStream = _getDateTimeStream();
           _hourTimeStream = _getHourTimeStream();
           doFullscreen = false;
         });
-        _startFullscreenTimer();
 
-        // Optionally extend the delay if doFullscreen is called again
-        _fullscreenTimer?.cancel();
-        _fullscreenTimer = Timer(
-          initialDelay + additionalDelay, // Add extra delay
-          () {
-            setState(() {
-              doFullscreen = true;
-            });
-          },
-        );
+        if (delayedFullscreenStart == 0) {
+          _startFullscreenTimer();
+        } else {
+          setState(() {
+            delayedFullscreenStart += delayedFullscreenTimer * 60;
+          });
+        }
       }
     }
     if (call.method.toString() == "address") {
@@ -204,7 +264,7 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
         final number = separateNumbers(queueNumber);
         final letters = separateLetters(queueNumber);
         int digitCount = getDigitCount(number);
-        if (playAds) {
+        if (playAds && !adsVideoMuted) {
           setState(() {});
           controller!.setVolume(0.1);
 
@@ -274,6 +334,13 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
     }
   }
 
+  void resetMapValues(Map<String, Map<String, String>> map) {
+    map.forEach((key, value) {
+      value['current'] = '000';
+      value['next'] = '000';
+    });
+  }
+
   void _updateResultMap() {
     resultMap.clear();
     for (int i = 0; i < dataList.length; i++) {
@@ -306,7 +373,9 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
     DateTime now = DateTime.now();
     String day = _getDayName(now.weekday);
     String month = _getMonthName(now.month);
-    String formattedDate = '$day, ${now.day} $month ${now.year}';
+    String formattedDate = lang == 'id'
+        ? '$day, ${now.day} $month ${now.year}'
+        : '$day, $month ${now.day}, ${now.year}';
 
     return formattedDate;
   }
@@ -319,14 +388,14 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
   }
 
   String _getDayName(int day) {
-    const dayNames = {
-      1: 'Senin',
-      2: 'Selasa',
-      3: 'Rabu',
-      4: 'Kamis',
-      5: 'Jumat',
-      6: 'Sabtu',
-      7: 'Minggu',
+    var dayNames = {
+      1: lang == 'id' ? 'Senin' : 'Monday',
+      2: lang == 'id' ? 'Selasa' : 'Tuesday',
+      3: lang == 'id' ? 'Rabu' : 'Wednesday',
+      4: lang == 'id' ? 'Kamis' : 'Thursday',
+      5: lang == 'id' ? 'Jumat' : 'Friday',
+      6: lang == 'id' ? 'Sabtu' : 'Saturday',
+      7: lang == 'id' ? 'Minggu' : 'Sunday',
     };
     return dayNames[day] ?? '';
   }
@@ -357,19 +426,19 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
   }
 
   String _getMonthName(int month) {
-    const monthNames = {
-      1: 'Januari',
-      2: 'Februari',
-      3: 'Maret',
-      4: 'April',
-      5: 'Mei',
-      6: 'Juni',
-      7: 'Juli',
-      8: 'Agustus',
-      9: 'September',
-      10: 'Oktober',
-      11: 'November',
-      12: 'Desember',
+    var monthNames = {
+      1: lang == 'id' ? 'Januari' : 'January',
+      2: lang == 'id' ? 'Februari' : 'February',
+      3: lang == 'id' ? 'Maret' : 'March',
+      4: lang == 'id' ? 'April' : 'April',
+      5: lang == 'id' ? 'Mei' : 'May',
+      6: lang == 'id' ? 'Juni' : 'June',
+      7: lang == 'id' ? 'Juli' : 'July',
+      8: lang == 'id' ? 'Agustus' : 'August',
+      9: lang == 'id' ? 'September' : 'September',
+      10: lang == 'id' ? 'Oktober' : 'October',
+      11: lang == 'id' ? 'November' : 'November',
+      12: lang == 'id' ? 'Desember' : 'December',
     };
     return monthNames[month] ?? '';
   }
@@ -384,20 +453,41 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
   }
 
   void _startFullscreenTimer() {
-    _fullscreenTimer?.cancel(); // Cancel any existing timer
-    _fullscreenTimer = Timer(initialDelay, () {
-      setState(() {
-        doFullscreen = true;
-      });
+    setState(() {
+      delayedFullscreenStart = delayedFullscreenTimer * 60;
+    });
+    _fullscreenTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (delayedFullscreenStart > 0) {
+        setState(() {
+          delayedFullscreenStart--;
+        });
+      } else {
+        setState(() {
+          _fullscreenTimer?.cancel();
+          doFullscreen = true;
+        });
+      }
     });
   }
 
   void updatePathVideo() async {
     final currentVideoPath =
         await const FlutterSecureStorage().read(key: 'env_path');
-
+    final autoFullscreenTimer =
+        await const FlutterSecureStorage().read(key: 'auto_fullscreen_timer');
+    final adsMuted = await const FlutterSecureStorage().read(key: 'ads_muted');
+    final autoFullscreen =
+        await const FlutterSecureStorage().read(key: 'auto_fullscreen');
+    int timerFulscreen = int.parse(autoFullscreenTimer!);
+    bool muted = adsMuted == '1' ? true : false;
     setState(() {
       pathVideo = currentVideoPath ?? '';
+      adsVideoMuted = muted;
+      if (playAds) {
+        muted ? controller!.setVolume(0.0) : controller!.setVolume(1.0);
+      }
+      delayedFullscreenTimer = timerFulscreen;
+      isAutoFullscreen = autoFullscreen == '1' ? true : false;
     });
   }
 
@@ -424,7 +514,11 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
 
         return;
       }
-
+      if (adsVideoMuted) {
+        setState(() {
+          controller!.setVolume(0.0);
+        });
+      }
       controller!.play();
     }).catchError((e) async {
       await _logApp.writeLog("controller.initialize() error occurs: $e");
@@ -442,12 +536,18 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
   @override
   void initState() {
     super.initState();
+    Future.delayed(const Duration(seconds: 5), () {
+      setState(() {
+        isLoading = false;
+      });
+    });
     DesktopMultiWindow.setMethodHandler(_handleMethodCallback);
     windowManager.addListener(this);
     _dateTimeStream = _getDateTimeStream();
     _hourTimeStream = _getHourTimeStream();
 
     getCallText();
+
     updatePathVideo();
   }
 
@@ -466,289 +566,204 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
           debugShowCheckedModeBanner: false,
           home: Scaffold(
               backgroundColor: const Color(0xffecf0f3),
-              body: doFullscreen && playAds
-                  ? Stack(
-                      children: [
-                        JkVideoControlPanel(
-                          controller!,
-                          showClosedCaptionButton: false,
-                          showFullscreenButton: false,
-                          showVolumeButton: false,
-                          onPrevClicked: (nowPlayIndex <= 0)
-                              ? null
-                              : () {
-                                  playPrevVideo();
-                                },
-                          onNextClicked: (nowPlayIndex + 1 >= ads.length)
-                              ? null
-                              : () {
-                                  playNextVideo();
-                                },
-                          onPlayEnded: () {
-                            if (nowPlayIndex + 1 >= ads.length) {
-                              // end of playlist
-                              if (true) {
-                                if (ads.length == 1) {
-                                  controller!.seekTo(Duration.zero);
-                                  controller!.play();
-                                } else {
-                                  playVideo(0);
-                                }
-                              }
-                            } else {
-                              playNextVideo();
-                            }
-                          },
-                        ),
-                        Positioned(
-                            bottom: 10,
-                            right: 0,
-                            child: IconButton(
-                                hoverColor: AppColors.grey,
-                                onPressed: () {
-                                  setState(() {
-                                    _dateTimeStream = _getDateTimeStream();
-                                    _hourTimeStream = _getHourTimeStream();
-                                    doFullscreen = false;
-                                  });
-                                },
-                                icon: const Icon(
-                                  Icons.fullscreen_exit,
-                                  size: 30,
-                                  color: AppColors.white,
-                                ))),
-                      ],
-                    )
-                  : Stack(
-                      children: [
-                        Positioned(
-                            top: 0,
-                            right: 0,
-                            child: IconButton(
-                                hoverColor: AppColors.grey,
-                                onPressed: () async {
-                                  await WindowManager.instance.close();
-                                },
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Color.fromARGB(255, 221, 221, 221),
-                                ))),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
+              body: isLoading
+                  ? const AppLoading()
+                  : doFullscreen && playAds && isAutoFullscreen
+                      ? Stack(
                           children: [
-                            Expanded(
-                                flex: 2,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 20, right: 30),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      CachedNetworkImage(
-                                          imageUrl: logo,
-                                          height: 5.h,
-                                          fit: BoxFit.contain,
-                                          filterQuality: FilterQuality.high,
-                                          progressIndicatorBuilder: (context,
-                                                  url, downloadProgress) =>
-                                              SizedBox(
-                                                width: 50,
-                                                height: 50,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        value: downloadProgress
-                                                            .progress),
-                                              ),
-                                          errorWidget: (context, url, error) =>
-                                              const SizedBox()),
-                                      Expanded(
-                                        child: Center(
-                                          child: TitleText(
-                                            text: fullName,
-                                            fontSize: 15.sp,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.black,
-                                          ),
-                                        ),
-                                      ),
-                                      Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: [
-                                          StreamBuilder<String>(
-                                            stream: _dateTimeStream,
-                                            builder: (context, snapshot) {
-                                              if (snapshot.connectionState ==
-                                                  ConnectionState.active) {
-                                                return AppText(
-                                                  text: snapshot.data ?? '',
-                                                  fontSize: 6.sp,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: AppColors.blackCalm,
-                                                );
-                                              } else {
-                                                return const SizedBox();
-                                              }
-                                            },
-                                          ),
-                                          StreamBuilder<String>(
-                                            stream: _hourTimeStream,
-                                            builder: (context, snapshot) {
-                                              if (snapshot.connectionState ==
-                                                  ConnectionState.active) {
-                                                return AppText(
-                                                  text: snapshot.data ?? '',
-                                                  fontSize: 7.sp,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: AppColors.black,
-                                                );
-                                              } else {
-                                                return const SizedBox();
-                                              }
-                                            },
-                                          ),
-                                        ],
-                                      )
-                                    ],
-                                  ),
-                                )),
-                            Expanded(
-                              flex: 10,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            JkVideoControlPanel(
+                              controller!,
+                              showClosedCaptionButton: false,
+                              showFullscreenButton: false,
+                              showVolumeButton: false,
+                              onPrevClicked: (nowPlayIndex <= 0)
+                                  ? null
+                                  : () {
+                                      playPrevVideo();
+                                    },
+                              onNextClicked: (nowPlayIndex + 1 >= ads.length)
+                                  ? null
+                                  : () {
+                                      playNextVideo();
+                                    },
+                              onPlayEnded: () {
+                                if (nowPlayIndex + 1 >= ads.length) {
+                                  // end of playlist
+                                  if (true) {
+                                    if (ads.length == 1) {
+                                      controller!.seekTo(Duration.zero);
+                                      controller!.play();
+                                    } else {
+                                      playVideo(0);
+                                    }
+                                  }
+                                } else {
+                                  playNextVideo();
+                                }
+                              },
+                            ),
+                            Positioned(
+                                bottom: 10,
+                                right: 0,
+                                child: IconButton(
+                                    hoverColor: AppColors.grey,
+                                    onPressed: () {
+                                      setState(() {
+                                        _dateTimeStream = _getDateTimeStream();
+                                        _hourTimeStream = _getHourTimeStream();
+                                        doFullscreen = false;
+                                      });
+                                    },
+                                    icon: const Icon(
+                                      Icons.fullscreen_exit,
+                                      size: 30,
+                                      color: Colors.transparent,
+                                    ))),
+                          ],
+                        )
+                      : Stack(
+                          children: [
+                            Positioned(
+                                top: 0,
+                                right: 0,
+                                child: IconButton(
+                                    hoverColor: AppColors.grey,
+                                    onPressed: () async {
+                                      await WindowManager.instance.close();
+                                    },
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Color.fromARGB(255, 221, 221, 221),
+                                    ))),
+                            Padding(
+                              padding: const EdgeInsets.all(
+                                40.0,
+                              ),
+                              child: Column(
                                 children: [
+                                  // Header
                                   Expanded(
-                                    flex: 2,
-                                    child: Column(
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              bottom: 15, left: 20, right: 20),
-                                          child: Container(
-                                            width: double.infinity,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xffecf0f3),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              gradient: const LinearGradient(
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                                colors: [
-                                                  Color(0xffecf0f3),
-                                                  Color(0xffecf0f3),
-                                                ],
-                                              ),
-                                              boxShadow: const [
-                                                BoxShadow(
-                                                  color: Color(0xffffffff),
-                                                  offset: Offset(-20.0, -20.0),
-                                                  blurRadius: 30,
-                                                  spreadRadius: 0.0,
-                                                ),
-                                                BoxShadow(
-                                                  color: Color(0xffced2d5),
-                                                  offset: Offset(20.0, 20.0),
-                                                  blurRadius: 30,
-                                                  spreadRadius: 0.0,
-                                                ),
-                                              ],
-                                            ),
-                                            padding: const EdgeInsets.only(
-                                                top: 10, bottom: 10),
-                                            child: const Center(
-                                              child: AppText(
-                                                text: 'Queue Number',
-                                                fontSize: 25,
-                                                fontWeight: FontWeight.bold,
-                                                color: AppColors.black,
+                                      flex: 3,
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 20),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 1,
+                                              child: Align(
+                                                alignment: Alignment.centerLeft,
+                                                child: CachedNetworkImage(
+                                                    imageUrl: logo,
+                                                    width: 30.w,
+                                                    fit: BoxFit.contain,
+                                                    filterQuality:
+                                                        FilterQuality.high,
+                                                    progressIndicatorBuilder:
+                                                        (context, url,
+                                                                downloadProgress) =>
+                                                            SizedBox(
+                                                              width: 50,
+                                                              child: CircularProgressIndicator(
+                                                                  value: downloadProgress
+                                                                      .progress),
+                                                            ),
+                                                    errorWidget:
+                                                        (context, url, error) =>
+                                                            const SizedBox()),
                                               ),
                                             ),
-                                          ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Center(
+                                                  child: TitleText(
+                                                    text: fullName,
+                                                    fontSize: 19.sp,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: AppColors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                                flex: 1,
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.end,
+                                                  children: [
+                                                    StreamBuilder<String>(
+                                                      stream: _dateTimeStream,
+                                                      builder:
+                                                          (context, snapshot) {
+                                                        if (snapshot
+                                                                .connectionState ==
+                                                            ConnectionState
+                                                                .active) {
+                                                          return AppText(
+                                                            text:
+                                                                snapshot.data ??
+                                                                    '',
+                                                            fontSize: 5.5.sp,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: AppColors
+                                                                .blackCalm,
+                                                          );
+                                                        } else {
+                                                          return const SizedBox();
+                                                        }
+                                                      },
+                                                    ),
+                                                    StreamBuilder<String>(
+                                                      stream: _hourTimeStream,
+                                                      builder:
+                                                          (context, snapshot) {
+                                                        if (snapshot
+                                                                .connectionState ==
+                                                            ConnectionState
+                                                                .active) {
+                                                          return AppText(
+                                                            text:
+                                                                snapshot.data ??
+                                                                    '',
+                                                            fontSize: 8.5.sp,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color:
+                                                                AppColors.black,
+                                                          );
+                                                        } else {
+                                                          return const SizedBox();
+                                                        }
+                                                      },
+                                                    ),
+                                                  ],
+                                                )),
+                                          ],
                                         ),
+                                      )),
+                                  // Body and Aside
+                                  Expanded(
+                                    flex: 15,
+                                    child: Row(
+                                      children: [
+                                        // Main Body
                                         Expanded(
-                                          child: Wrap(
-                                            spacing: 10,
-                                            runSpacing: 10,
-                                            alignment: WrapAlignment.center,
-                                            children: List.generate(
-                                              resultMap.length,
-                                              (index) {
-                                                String key = resultMap.keys
-                                                    .elementAt(index);
-                                                Map<String, String> values =
-                                                    resultMap[key]!;
-                                                double containerWidth;
-                                                double containerHight = 5;
-                                                double numberSize;
-                                                double numberNextSize = 4;
-                                                double arrowNextSize = 5;
-
-                                                if (dataList.length == 1) {
-                                                  containerWidth = 115;
-                                                  numberSize = 65;
-                                                  containerHight = 28;
-                                                  numberNextSize = 10;
-                                                  arrowNextSize = 6;
-                                                } else if (dataList.length <=
-                                                    4) {
-                                                  containerWidth = 56;
-                                                  numberSize = 50;
-                                                  containerHight = 20.1;
-                                                  numberNextSize = 10;
-                                                  arrowNextSize = 5;
-                                                } else if (dataList.length <=
-                                                    6) {
-                                                  containerWidth = 56;
-                                                  numberSize = 30;
-                                                  containerHight = 12.8;
-                                                  numberNextSize = 6;
-                                                  arrowNextSize = 4;
-                                                } else if (dataList.length <=
-                                                    9) {
-                                                  containerWidth = 36;
-                                                  containerHight = 12.8;
-                                                  numberSize = 30;
-                                                  numberNextSize = 1;
-                                                  arrowNextSize = 1;
-                                                } else if (dataList.length <=
-                                                    12) {
-                                                  containerWidth = 36;
-                                                  containerHight = 9.2;
-                                                  numberSize = 26;
-                                                  numberNextSize = 1;
-                                                  arrowNextSize = 1;
-                                                } else if (dataList.length <=
-                                                    16) {
-                                                  containerWidth = 26.5;
-                                                  containerHight = 9.2;
-                                                  numberSize = 23;
-                                                  numberNextSize = 1;
-                                                  arrowNextSize = 1;
-                                                } else if (dataList.length <=
-                                                    20) {
-                                                  containerWidth = 20.5;
-                                                  containerHight = 9.2;
-                                                  numberSize = 20;
-                                                  numberNextSize = 1;
-                                                  arrowNextSize = 1;
-                                                } else {
-                                                  containerWidth = 15;
-                                                  containerHight = 7;
-                                                  numberSize = 15;
-                                                  numberNextSize = 1;
-                                                  arrowNextSize = 1;
-                                                }
-
-                                                return Padding(
+                                          flex: 8,
+                                          child: Column(
+                                            children: [
+                                              Expanded(
+                                                child: Padding(
                                                   padding:
-                                                      const EdgeInsets.all(10),
+                                                      const EdgeInsets.only(
+                                                    right: 20,
+                                                  ),
                                                   child: Container(
-                                                    width: containerWidth.w,
-                                                    height: containerHight.h,
+                                                    width: double.infinity,
                                                     decoration: BoxDecoration(
                                                       color: const Color(
                                                           0xffecf0f3),
@@ -785,395 +800,396 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
                                                         ),
                                                       ],
                                                     ),
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                            top: 10,
-                                                            bottom: 10),
-                                                    child: Column(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        Row(
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .center,
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .center,
-                                                          children: [
-                                                            key == '0000'
-                                                                ? AppText(
-                                                                    text: '-',
-                                                                    fontSize:
-                                                                        numberSize
-                                                                            .sp,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold,
-                                                                    color: AppColors
-                                                                        .black,
-                                                                  )
-                                                                : AppText(
-                                                                    text: key,
-                                                                    fontSize:
-                                                                        numberSize
-                                                                            .sp,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold,
-                                                                    color: AppColors
-                                                                        .black,
-                                                                  ),
-                                                            const SizedBox(
-                                                                width: 10),
-                                                            TextAnimator(
-                                                              values[
-                                                                  'current']!,
-                                                              style: TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                fontSize:
-                                                                    numberSize
-                                                                        .sp,
-                                                                fontFamily:
-                                                                    'Poppins',
-                                                                letterSpacing:
-                                                                    1,
-                                                                wordSpacing: 1,
-                                                                color: AppColors
-                                                                    .maroon,
-                                                              ),
-                                                              incomingEffect: WidgetTransitionEffects
-                                                                  .incomingSlideInFromBottom(
-                                                                      duration: const Duration(
-                                                                          milliseconds:
-                                                                              1500)),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        Visibility(
-                                                            visible: values[
-                                                                        'next'] !=
-                                                                    '000' &&
-                                                                resultMap
-                                                                        .length <=
-                                                                    6,
-                                                            child: Icon(
-                                                              FontAwesomeIcons
-                                                                  .anglesUp,
-                                                              size:
-                                                                  arrowNextSize
-                                                                      .sp,
-                                                            )),
-                                                        const SizedBox(
-                                                          height: 10,
-                                                        ),
-                                                        Row(
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .center,
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .center,
-                                                          children: [
-                                                            Visibility(
-                                                              visible: values[
-                                                                          'next'] !=
-                                                                      '000' &&
-                                                                  resultMap
-                                                                          .length <=
-                                                                      6,
-                                                              child: AppText(
-                                                                text: key,
-                                                                fontSize:
-                                                                    numberNextSize
-                                                                        .sp,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                color: AppColors
-                                                                    .black,
-                                                              ),
-                                                            ),
-                                                            Visibility(
-                                                              visible: values[
-                                                                          'next'] !=
-                                                                      '000' &&
-                                                                  resultMap
-                                                                          .length <=
-                                                                      6,
-                                                              child:
-                                                                  TextAnimator(
-                                                                values['next']!,
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                  fontSize:
-                                                                      numberNextSize
-                                                                          .sp,
-                                                                  fontFamily:
-                                                                      'Poppins',
-                                                                  letterSpacing:
-                                                                      1,
-                                                                  wordSpacing:
-                                                                      1,
-                                                                  color:
-                                                                      AppColors
-                                                                          .black,
-                                                                ),
-                                                                incomingEffect:
-                                                                    WidgetTransitionEffects.incomingSlideInFromBottom(
-                                                                        duration:
-                                                                            const Duration(milliseconds: 1500)),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ],
+                                                    alignment: Alignment.center,
+                                                    child: AppText(
+                                                      text: lang == 'id'
+                                                          ? 'Antrean Sekarang'
+                                                          : 'Current Serving',
+                                                      fontSize: 7.sp,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: AppColors.black,
                                                     ),
                                                   ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: 20,
-                                          bottom: 20,
-                                        ),
-                                        child: Container(
-                                            width: 16,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xffecf0f3),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              gradient: const LinearGradient(
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                                colors: [
-                                                  Color(0xffecf0f3),
-                                                  Color(0xffecf0f3),
-                                                ],
+                                                ),
                                               ),
-                                              boxShadow: const [
-                                                BoxShadow(
-                                                  color: Color(0xffffffff),
-                                                  offset: Offset(-20.0, -20.0),
-                                                  blurRadius: 30,
-                                                  spreadRadius: 0.0,
-                                                ),
-                                                BoxShadow(
-                                                  color: Color(0xffced2d5),
-                                                  offset: Offset(20.0, 20.0),
-                                                  blurRadius: 30,
-                                                  spreadRadius: 0.0,
-                                                ),
-                                              ],
-                                            ),
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                AspectRatio(
-                                                  aspectRatio: 16 / 9,
-                                                  child: playAds
-                                                      ? JkVideoControlPanel(
-                                                          controller!,
-                                                          showClosedCaptionButton:
-                                                              true,
-                                                          showFullscreenButton:
-                                                              true,
-                                                          showVolumeButton:
-                                                              true,
-                                                          onPrevClicked:
-                                                              (nowPlayIndex <=
-                                                                      0)
-                                                                  ? null
-                                                                  : () {
-                                                                      playPrevVideo();
-                                                                    },
-                                                          onNextClicked:
-                                                              (nowPlayIndex +
-                                                                          1 >=
-                                                                      ads.length)
-                                                                  ? null
-                                                                  : () {
-                                                                      playNextVideo();
-                                                                    },
-                                                          onPlayEnded: () {
-                                                            if (nowPlayIndex +
-                                                                    1 >=
-                                                                ads.length) {
-                                                              // end of playlist
-                                                              if (true) {
-                                                                if (ads.length ==
-                                                                    1) {
-                                                                  controller!.seekTo(
-                                                                      Duration
-                                                                          .zero);
-                                                                  controller!
-                                                                      .play();
-                                                                } else {
-                                                                  playVideo(0);
-                                                                }
-                                                              }
-                                                            } else {
-                                                              playNextVideo();
-                                                            }
-                                                          },
-                                                        )
-                                                      : Image.asset(
-                                                          'assets/images/novideo.webp',
-                                                          fit: BoxFit.contain,
-                                                          filterQuality:
-                                                              FilterQuality
-                                                                  .high,
-                                                        ),
-                                                ),
-                                                Visibility(
-                                                  visible: queueCall != '',
+                                              Expanded(
+                                                  flex: 12,
                                                   child: Padding(
                                                     padding:
                                                         const EdgeInsets.only(
-                                                            bottom: 130),
-                                                    child: Column(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        const SizedBox(
-                                                          height: 20,
+                                                            right: 20, top: 20),
+                                                    child: BoxWrap(
+                                                      resultMap: resultMap,
+                                                    ),
+                                                  )),
+                                              Visibility(
+                                                visible: expiredList.isNotEmpty,
+                                                child: Expanded(
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            top: 20, right: 20),
+                                                    child: Container(
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: const Color(
+                                                              0xffecf0f3),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(10),
+                                                          gradient:
+                                                              const LinearGradient(
+                                                            begin: Alignment
+                                                                .topLeft,
+                                                            end: Alignment
+                                                                .bottomRight,
+                                                            colors: [
+                                                              Color(0xffecf0f3),
+                                                              Color(0xffecf0f3),
+                                                            ],
+                                                          ),
+                                                          boxShadow: const [
+                                                            BoxShadow(
+                                                              color: Color(
+                                                                  0xffffffff),
+                                                              offset: Offset(
+                                                                  -20.0, -20.0),
+                                                              blurRadius: 30,
+                                                              spreadRadius: 0.0,
+                                                            ),
+                                                            BoxShadow(
+                                                              color: Color(
+                                                                  0xffced2d5),
+                                                              offset: Offset(
+                                                                  20.0, 20.0),
+                                                              blurRadius: 30,
+                                                              spreadRadius: 0.0,
+                                                            ),
+                                                          ],
                                                         ),
-                                                        Row(
+                                                        child: Row(
                                                           children: [
                                                             const SizedBox(
-                                                              width: 10,
-                                                            ),
-                                                            Image.asset(
-                                                              'assets/images/notif.gif',
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 5,
+                                                              width: 20,
                                                             ),
                                                             AppText(
-                                                              text:
-                                                                  'Attention!',
-                                                              fontSize: 7.sp,
+                                                              text: lang == 'id'
+                                                                  ? 'Akan Berakhir: '
+                                                                  : 'Expired Soon: ',
+                                                              fontSize: 5.sp,
+                                                              // fontStyle: FontStyle.italic,
                                                               fontWeight:
                                                                   FontWeight
                                                                       .bold,
                                                               color: AppColors
                                                                   .black,
                                                             ),
-                                                          ],
-                                                        ),
-                                                        SizedBox(
-                                                          width:
-                                                              double.infinity,
-                                                          height: 12.h,
-                                                          child:
-                                                              DefaultTextStyle(
-                                                            style: TextStyle(
-                                                                fontSize:
-                                                                    10.5.sp,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                color: AppColors
-                                                                    .black),
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                            child:
-                                                                AnimatedTextKit(
-                                                              repeatForever:
-                                                                  true,
-                                                              animatedTexts: [
-                                                                RotateAnimatedText(callCount ==
-                                                                        (maxCall -
-                                                                            1)
-                                                                    ? "Panggilan Terakhir"
-                                                                    : tittleCall),
-                                                                RotateAnimatedText(
-                                                                  callCount ==
-                                                                          (maxCall -
-                                                                              1)
-                                                                      ? " $queueCall"
-                                                                      : " $queueCall",
-                                                                  rotateOut:
-                                                                      true,
-                                                                  textStyle:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        33.sp,
+                                                            Expanded(
+                                                              child: Padding(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .only(
+                                                                        right:
+                                                                            10),
+                                                                child:
+                                                                    DefaultTextStyle(
+                                                                  style: TextStyle(
+                                                                      fontSize:
+                                                                          6.sp,
+                                                                      color: AppColors
+                                                                          .maroon,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      overflow:
+                                                                          TextOverflow
+                                                                              .ellipsis),
+                                                                  child:
+                                                                      AnimatedTextKit(
+                                                                    repeatForever:
+                                                                        true,
+                                                                    pause: const Duration(
+                                                                        milliseconds:
+                                                                            500),
+                                                                    animatedTexts: [
+                                                                      FadeAnimatedText(
+                                                                          expiredList
+                                                                              .join(', ')),
+                                                                    ],
                                                                   ),
                                                                 ),
-                                                                RotateAnimatedText(
-                                                                    labelCall),
-                                                              ],
+                                                              ),
                                                             ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
+                                                          ],
+                                                        )),
                                                   ),
                                                 ),
-                                                const Padding(
-                                                  padding: EdgeInsets.only(
-                                                      bottom: 20),
-                                                  child: Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      AppText(
-                                                        text:
-                                                            'BISA Online Queue System V.0.2.1 (alpha-test)',
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        fontSize: 12,
-                                                        maxLines: 2,
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                      ),
-                                                      AppText(
-                                                        text:
-                                                            'Bisagroup © 2024. All Rights Reserved. ',
-                                                        fontWeight:
-                                                            FontWeight.normal,
-                                                        fontSize: 12,
-                                                        maxLines: 2,
-                                                        textAlign:
-                                                            TextAlign.center,
-                                                      ),
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                        // Aside
+                                        Expanded(
+                                            flex: 4,
+                                            child: Container(
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      const Color(0xffecf0f3),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  gradient:
+                                                      const LinearGradient(
+                                                    begin: Alignment.topLeft,
+                                                    end: Alignment.bottomRight,
+                                                    colors: [
+                                                      Color(0xffecf0f3),
+                                                      Color(0xffecf0f3),
                                                     ],
                                                   ),
+                                                  boxShadow: const [
+                                                    BoxShadow(
+                                                      color: Color(0xffffffff),
+                                                      offset:
+                                                          Offset(-20.0, -20.0),
+                                                      blurRadius: 30,
+                                                      spreadRadius: 0.0,
+                                                    ),
+                                                    BoxShadow(
+                                                      color: Color(0xffced2d5),
+                                                      offset:
+                                                          Offset(20.0, 20.0),
+                                                      blurRadius: 30,
+                                                      spreadRadius: 0.0,
+                                                    ),
+                                                  ],
                                                 ),
-                                              ],
-                                            ))),
-                                  )
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    Expanded(
+                                                      flex: 5,
+                                                      child: AspectRatio(
+                                                        aspectRatio: 16 / 9,
+                                                        child: playAds
+                                                            ? JkVideoControlPanel(
+                                                                controller!,
+                                                                showClosedCaptionButton:
+                                                                    true,
+                                                                showFullscreenButton:
+                                                                    true,
+                                                                showVolumeButton:
+                                                                    true,
+                                                                onPrevClicked:
+                                                                    (nowPlayIndex <=
+                                                                            0)
+                                                                        ? null
+                                                                        : () {
+                                                                            playPrevVideo();
+                                                                          },
+                                                                onNextClicked:
+                                                                    (nowPlayIndex +
+                                                                                1 >=
+                                                                            ads.length)
+                                                                        ? null
+                                                                        : () {
+                                                                            playNextVideo();
+                                                                          },
+                                                                onPlayEnded:
+                                                                    () {
+                                                                  if (nowPlayIndex +
+                                                                          1 >=
+                                                                      ads.length) {
+                                                                    // end of playlist
+                                                                    if (true) {
+                                                                      if (ads.length ==
+                                                                          1) {
+                                                                        controller!
+                                                                            .seekTo(Duration.zero);
+                                                                        controller!
+                                                                            .play();
+                                                                      } else {
+                                                                        playVideo(
+                                                                            0);
+                                                                      }
+                                                                    }
+                                                                  } else {
+                                                                    playNextVideo();
+                                                                  }
+                                                                },
+                                                              )
+                                                            : Image.asset(
+                                                                'assets/images/novideo.webp',
+                                                                fit: BoxFit
+                                                                    .contain,
+                                                                filterQuality:
+                                                                    FilterQuality
+                                                                        .high,
+                                                              ),
+                                                      ),
+                                                    ),
+                                                    Expanded(
+                                                      flex: 6,
+                                                      child: Visibility(
+                                                        visible:
+                                                            queueCall != '',
+                                                        child: Column(
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .start,
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .center,
+                                                          children: [
+                                                            const SizedBox(
+                                                              height: 20,
+                                                            ),
+                                                            Row(
+                                                              children: [
+                                                                const SizedBox(
+                                                                  width: 10,
+                                                                ),
+                                                                Image.asset(
+                                                                  'assets/images/notif.gif',
+                                                                  width: MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .width *
+                                                                      0.05,
+                                                                  height: MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .height *
+                                                                      0.06,
+                                                                  fit: BoxFit
+                                                                      .contain,
+                                                                  filterQuality:
+                                                                      FilterQuality
+                                                                          .high,
+                                                                ),
+                                                                const SizedBox(
+                                                                  width: 5,
+                                                                ),
+                                                                AppText(
+                                                                  text: lang ==
+                                                                          'id'
+                                                                      ? 'Perhatian!'
+                                                                      : 'Attention!',
+                                                                  fontSize:
+                                                                      8.sp,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  color:
+                                                                      AppColors
+                                                                          .black,
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            SizedBox(
+                                                              width: double
+                                                                  .infinity,
+                                                              height: MediaQuery.of(
+                                                                          context)
+                                                                      .size
+                                                                      .height *
+                                                                  0.25,
+                                                              child:
+                                                                  DefaultTextStyle(
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        11.sp,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    color: AppColors
+                                                                        .black),
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                                child:
+                                                                    AnimatedTextKit(
+                                                                  repeatForever:
+                                                                      true,
+                                                                  animatedTexts: [
+                                                                    RotateAnimatedText(callCount ==
+                                                                            (maxCall -
+                                                                                1)
+                                                                        ? "Panggilan Terakhir"
+                                                                        : tittleCall),
+                                                                    RotateAnimatedText(
+                                                                      callCount ==
+                                                                              (maxCall - 1)
+                                                                          ? " $queueCall"
+                                                                          : " $queueCall",
+                                                                      rotateOut:
+                                                                          true,
+                                                                      textStyle:
+                                                                          TextStyle(
+                                                                        fontSize:
+                                                                            35.sp,
+                                                                      ),
+                                                                    ),
+                                                                    RotateAnimatedText(
+                                                                        labelCall),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Expanded(
+                                                      flex: 1,
+                                                      child: Column(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .end,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          AppText(
+                                                            text:
+                                                                'BISA Online Queue System V.${VersionApp.version}',
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            fontSize: 5.sp,
+                                                            maxLines: 1,
+                                                            textAlign: TextAlign
+                                                                .center,
+                                                          ),
+                                                          AppText(
+                                                            text: lang == 'id'
+                                                                ? 'BISA Group © ${DateTime.now().year}. Hak Cipta Dilindungi UU.'
+                                                                : 'BISA Group © ${DateTime.now().year}. All Rights Reserved.',
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal,
+                                                            fontSize: 5.sp,
+                                                            maxLines: 1,
+                                                            textAlign: TextAlign
+                                                                .center,
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 10,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ))),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                           ],
-                        ),
-                      ],
-                    )));
+                        )));
     });
   }
 }

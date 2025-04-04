@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:queue_system/models/end_shift.dart';
 import 'package:queue_system/models/printer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_esc_pos_utils/flutter_esc_pos_utils.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:queue_system/models/shift.dart';
+import 'package:queue_system/utils/constan.dart';
+import 'package:queue_system/utils/lang_printer.dart';
 import 'package:queue_system/utils/log.dart';
 import 'package:queue_system/widget/app_dialog.dart';
 import 'package:thermal_printer/thermal_printer.dart';
@@ -210,38 +213,48 @@ class PrinterController extends GetxController {
     await saveSettingStorage();
   }
 
-  Future<void> printReceiveTest(
-    BuildContext context,
-  ) async {
+  Future<void> printReceiveTest() async {
     List<int> bytes = [];
     final profile = await CapabilityProfile.load(name: 'XP-N160I');
     final generator = Generator(PaperSize.mm80, profile);
     bytes += generator.setGlobalCodeTable('CP1252');
-    bytes += generator.text('Printer Queue System',
+    bytes += generator.hr();
+    bytes += generator.text('SUMMARY',
         styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.text('TEST PRINT SUCCESS',
+    bytes += generator.text('PRINTER TEST FOR QUEUE SYSTEM',
         styles: const PosStyles(align: PosAlign.center));
+    final printAt = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
+    bytes += generator.text(printAt,
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.hr(ch: '=');
+    bytes += generator.hr();
 
     printEscPos(bytes, generator);
   }
 
   Future<void> printQueue(String title, String qrCode, String queueNumber,
-      String cancelCode) async {
+      String cancelCode, int callCount) async {
     List<int> bytes = [];
+    final langPrint = await _secureStorage.read(key: 'lang_print');
+    final printerLang = PrinterLang(langPrint ?? 'en');
     final profile = await CapabilityProfile.load(name: 'XP-N160I');
-    final generator = Generator(PaperSize.mm58, profile);
-
+    final generator = Generator(PaperSize.mm80, profile);
+    bytes += generator.qrcode(
+      '',
+      size: QRSize.size1,
+      align: PosAlign.center,
+    );
     // Title Section
     bytes += generator.text(title.toUpperCase(),
         styles: const PosStyles(
           align: PosAlign.center,
           width: PosTextSize.size2,
         ),
-        linesAfter: 2);
+        linesAfter: 1);
 
     // Queue Number Section
     bytes += generator.text(
-      'Queue Number',
+      printerLang.customMessage('queue_number'),
       styles: const PosStyles(
         align: PosAlign.center,
       ),
@@ -256,7 +269,7 @@ class PrinterController extends GetxController {
 
     // QR Code Section
     bytes += generator.text(
-      'Scan the QR Code below to update your queue.',
+      printerLang.customMessage('scan_instruction'),
       styles: const PosStyles(
         align: PosAlign.center,
       ),
@@ -269,37 +282,56 @@ class PrinterController extends GetxController {
 
     // Cancel Code Section
     bytes += generator.text(
-      'To cancel your queue, use the code below:',
+      printerLang.customMessage('cancel_instruction'),
+      styles: const PosStyles(
+        align: PosAlign.center,
+      ),
+    );
+    bytes += generator.text(cancelCode,
+        styles:
+            const PosStyles(align: PosAlign.center, width: PosTextSize.size2),
+        linesAfter: 1);
+
+    // Footer Line
+
+    bytes += generator.text(
+      printerLang.customMessage(
+        'note',
+      ),
       styles: const PosStyles(
         align: PosAlign.center,
       ),
     );
     bytes += generator.text(
-      cancelCode,
+      '${printerLang.customMessage('note_cancel',
+              placeholders: {'callCount': callCount.toString()})} ${printerLang.customMessage(
+            callCount > 1 ? 'plural_call' : 'singular_call',
+          )}',
       styles: const PosStyles(
         align: PosAlign.center,
-        width: PosTextSize.size2
       ),
     );
-
-    // Footer Line
-
-    bytes += generator.text('Thank you for your patience!',
+    bytes += generator.text(
+        printerLang.customMessage(
+          'take_a_number',
+        ),
         styles: const PosStyles(
           align: PosAlign.center,
         ),
         linesAfter: 1);
 
     bytes += generator.text(
-      'BISA Online Queue System V.0.2.1 (alpha-test)',
+      'BISA Online Queue System V.${VersionApp.version}',
       styles: const PosStyles(
         align: PosAlign.center,
       ),
     );
 
-    final printAt = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
+    final printAt = langPrint == 'id'
+        ? DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now())
+        : DateFormat('MM/dd/yyyy HH:mm:ss').format(DateTime.now());
     bytes += generator.text(
-      'Printed at: $printAt',
+      '${printerLang.customMessage('printed_at')}: $printAt',
       styles: const PosStyles(
         align: PosAlign.center,
       ),
@@ -326,7 +358,7 @@ class PrinterController extends GetxController {
         linesAfter: 2);
 
     bytes += generator.row([
-      PosColumn(text: 'Start Shift', width: 5, styles: const PosStyles()),
+      PosColumn(text: 'start_shift'.tr, width: 5, styles: const PosStyles()),
       PosColumn(
           text: ': $startShift',
           width: 7,
@@ -335,7 +367,7 @@ class PrinterController extends GetxController {
           )),
     ]);
     bytes += generator.row([
-      PosColumn(text: 'End Shift', width: 5, styles: const PosStyles()),
+      PosColumn(text: 'end_shift_at'.tr, width: 5, styles: const PosStyles()),
       PosColumn(
           text: ': $endShift',
           width: 7,
@@ -401,7 +433,8 @@ class PrinterController extends GetxController {
       ]);
     });
     bytes += generator.row([
-      PosColumn(text: 'Total Queues', width: 6, styles: const PosStyles()),
+      PosColumn(
+          text: 'Total ${'queue'.tr}', width: 6, styles: const PosStyles()),
       PosColumn(
           text: queues.length.toString(),
           width: 6,
@@ -422,7 +455,7 @@ class PrinterController extends GetxController {
     bytes += generator.hr(ch: '=', linesAfter: 1);
 
     bytes += generator.text(
-      'BISA Online Queue System V.0.2.1 (alpha-test)',
+      'BISA Online Queue System V.${VersionApp.version}',
       styles: const PosStyles(
         align: PosAlign.center,
       ),
@@ -430,7 +463,107 @@ class PrinterController extends GetxController {
 
     final printAt = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
     bytes += generator.text(
-      'Printed at: $printAt',
+      '${'printed_at'.tr}: $printAt',
+      styles: const PosStyles(
+        align: PosAlign.center,
+      ),
+    );
+
+    printEscPos(bytes, generator);
+  }
+
+  Future<void> printEndDetailShift(
+    String outlet,
+    String startShift,
+    String endShift,
+    ShiftDetails? shiftDetails, // Menambahkan parameter shiftDetails
+  ) async {
+    List<int> bytes = [];
+
+    final profile = await CapabilityProfile.load(name: 'XP-N160I');
+    final generator = Generator(PaperSize.mm58, profile);
+    bytes +=
+        generator.setStyles(const PosStyles().copyWith(align: PosAlign.center));
+    bytes += generator.setGlobalCodeTable('CP1252');
+    bytes += generator.text(outlet.toUpperCase(),
+        styles: const PosStyles(
+          align: PosAlign.center,
+          width: PosTextSize.size2,
+          height: PosTextSize.size2,
+        ),
+        linesAfter: 2);
+
+    bytes += generator.row([
+      PosColumn(text: 'start_shift'.tr, width: 5, styles: const PosStyles()),
+      PosColumn(
+          text: ': $startShift',
+          width: 7,
+          styles: const PosStyles(
+            align: PosAlign.right,
+          )),
+    ]);
+    bytes += generator.row([
+      PosColumn(text: 'end_shift_at'.tr, width: 5, styles: const PosStyles()),
+      PosColumn(
+          text: ': $endShift',
+          width: 7,
+          styles: const PosStyles(
+            align: PosAlign.right,
+          )),
+    ]);
+    bytes += generator.emptyLines(1);
+
+    // Mencetak data queues
+    if (shiftDetails?.queues != null) {
+      bytes += generator.row([
+        PosColumn(text: 'queue_count'.tr, width: 5, styles: const PosStyles()),
+        PosColumn(
+            text: ': ${shiftDetails!.queues!.count} ${'queue'.tr}',
+            width: 7,
+            styles: const PosStyles(
+              align: PosAlign.right,
+            )),
+      ]);
+      bytes += generator.row([
+        PosColumn(
+            text: 'Total ${'queue'.tr}', width: 5, styles: const PosStyles()),
+        PosColumn(
+            text: ': ${shiftDetails.queues!.total} Pax',
+            width: 7,
+            styles: const PosStyles(
+              align: PosAlign.right,
+            )),
+      ]);
+    }
+    bytes += generator.emptyLines(1);
+
+    // Mencetak status
+    bytes += generator.text('shift_overview'.tr, styles: const PosStyles());
+    for (var status in shiftDetails?.status ?? []) {
+      bytes += generator.row([
+        PosColumn(
+            text: status.label ?? '', width: 4, styles: const PosStyles()),
+        PosColumn(
+            text: '${'count'.tr}: ${status.count}, Total: ${status.total}',
+            width: 8,
+            styles: const PosStyles(
+              align: PosAlign.right,
+            )),
+      ]);
+    }
+
+    bytes += generator.hr(ch: '=', linesAfter: 1);
+
+    bytes += generator.text(
+      'BISA Online Queue System V.${VersionApp.version}',
+      styles: const PosStyles(
+        align: PosAlign.center,
+      ),
+    );
+
+    final printAt = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
+    bytes += generator.text(
+      '${'printed_at'.tr} $printAt',
       styles: const PosStyles(
         align: PosAlign.center,
       ),
@@ -477,7 +610,7 @@ class PrinterController extends GetxController {
       }
       if (bluetoothPrinter.typePrinter == PrinterType.bluetooth &&
           Platform.isAndroid) {
-        if (currentStatus == BTStatus.connected) {
+        if (currentStatus.value == BTStatus.connected) {
           printerManager.send(type: bluetoothPrinter.typePrinter, bytes: bytes);
           pendingTask = null;
         }
@@ -486,9 +619,8 @@ class PrinterController extends GetxController {
       }
     } catch (e) {
       AppDialog.showToastInfo(
-        title: 'Printer Error!',
-        desc:
-            'Printer is not selected. Please select printer first in setting menu',
+        title: 'printer_error'.tr,
+        desc: 'printer_error_desc'.tr,
         func: () async {
           Get.back();
           await _logApp.writeLog(" Printer is not selected ${e.toString()}");

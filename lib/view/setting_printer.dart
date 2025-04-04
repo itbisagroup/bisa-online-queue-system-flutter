@@ -14,7 +14,7 @@ class PrinterSettingView extends GetView<PrinterController> {
     Get.put(PrinterController());
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Printer Setting'),
+        title:  Text('${'config'.tr} Printer '),
         centerTitle: true,
       ),
       body: Obx(
@@ -37,7 +37,7 @@ class PrinterSettingView extends GetView<PrinterController> {
                                 : () {
                                     controller.connectDevice();
                                   },
-                            child: const Text("Connect",
+                            child:  Text('connect'.tr,
                                 textAlign: TextAlign.center),
                           ),
                         ),
@@ -66,7 +66,7 @@ class PrinterSettingView extends GetView<PrinterController> {
                                     controller.isConnected.value = false;
                                     
                                   },
-                            child: const Text("Disconnect",
+                            child:  Text("disconnect".tr,
                                 textAlign: TextAlign.center),
                           ),
                         ),
@@ -75,13 +75,13 @@ class PrinterSettingView extends GetView<PrinterController> {
                   ),
                   DropdownButtonFormField<PrinterType>(
                     value: controller.defaultPrinterType.value,
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(
+                    decoration:  InputDecoration(
+                      prefixIcon: const Icon(
                         Icons.print,
                         size: 24,
                       ),
-                      labelText: "Type Printer Device",
-                      labelStyle: TextStyle(fontSize: 18.0),
+                      labelText: "type_printer".tr,
+                      labelStyle: const TextStyle(fontSize: 18.0),
                       focusedBorder: InputBorder.none,
                       enabledBorder: InputBorder.none,
                     ),
@@ -139,10 +139,10 @@ class PrinterSettingView extends GetView<PrinterController> {
                     child: SwitchListTile.adaptive(
                       contentPadding:
                           const EdgeInsets.only(bottom: 20.0, left: 20),
-                      title: const Text(
-                        "reconnect",
+                      title:  Text(
+                        "reconnect".tr,
                         textAlign: TextAlign.start,
-                        style: TextStyle(fontSize: 19.0),
+                        style: const TextStyle(fontSize: 19.0),
                       ),
                       value: controller.reconnect.value,
                       onChanged: (bool? value) {
@@ -191,12 +191,12 @@ class PrinterSettingView extends GetView<PrinterController> {
                                             .selectedPrinter.value.deviceName
                                     ? null
                                     : () async {
-                                        controller.printReceiveTest(context);
+                                        controller.printReceiveTest();
                                       },
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(
+                                child:  Padding(
+                                  padding: const EdgeInsets.symmetric(
                                       vertical: 2, horizontal: 20),
-                                  child: Text("Print test ticket",
+                                  child: Text("test_print".tr,
                                       textAlign: TextAlign.center),
                                 ),
                               ),
@@ -214,7 +214,7 @@ class PrinterSettingView extends GetView<PrinterController> {
                         keyboardType:
                             const TextInputType.numberWithOptions(signed: true),
                         decoration: const InputDecoration(
-                          label: Text("Ip Address"),
+                          label: Text("IP Address"),
                           prefixIcon: Icon(Icons.wifi, size: 24),
                         ),
                         onChanged: controller.setIpAddress,
@@ -251,12 +251,12 @@ class PrinterSettingView extends GetView<PrinterController> {
                             controller
                                 .setIpAddress(controller.ipController.text);
                           }
-                          controller.printReceiveTest(context);
+                          controller.printReceiveTest();
                         },
-                        child: const Padding(
+                        child:  Padding(
                           padding:
-                              EdgeInsets.symmetric(vertical: 4, horizontal: 50),
-                          child: Text("Print test ticket",
+                              const EdgeInsets.symmetric(vertical: 4, horizontal: 50),
+                          child: Text("test_print".tr,
                               textAlign: TextAlign.center),
                         ),
                       ),

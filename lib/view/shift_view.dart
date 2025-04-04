@@ -22,13 +22,13 @@ class ShiftView extends GetView<ShiftController> {
     return Scaffold(
         backgroundColor: AppColors.white,
         appBar: AppBar(
-          title: const AppText(
-            text: 'All Shifts',
+          title: AppText(
+            text: '${'all'.tr} Shifts',
             fontWeight: FontWeight.bold,
             fontSize: 30,
           ),
         ),
-        floatingActionButton: Obx(() =>   WidgetAnimator(
+        floatingActionButton: Obx(() => WidgetAnimator(
               incomingEffect: WidgetTransitionEffects(
                   delay: const Duration(milliseconds: 15),
                   offset: const Offset(0, -30),
@@ -36,75 +36,75 @@ class ShiftView extends GetView<ShiftController> {
                   duration: const Duration(milliseconds: 900)),
               atRestEffect: WidgetRestingEffects.wave(),
               child: controller.buttonNew.value
-              ? SizedBox(
-                  width: 160,
-                  child: FloatingActionButton(
-                    heroTag: 'new',
-                    backgroundColor: AppColors.confirm,
-                    onPressed: () {
-                      controller.newShiftDialog();
-                    },
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(right: 5.0),
-                          child: Icon(
-                            FontAwesomeIcons.calendarPlus,
-                            color: AppColors.white,
-                            size: 24,
-                          ),
+                  ? SizedBox(
+                      width: 160,
+                      child: FloatingActionButton(
+                        heroTag: 'new',
+                        backgroundColor: AppColors.confirm,
+                        onPressed: () {
+                          controller.newShiftDialog();
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(right: 5.0),
+                              child: Icon(
+                                FontAwesomeIcons.calendarPlus,
+                                color: AppColors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            AppText(
+                              text: 'new_shift'.tr,
+                              maxLines: 1,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.white,
+                              textAlign: TextAlign.end,
+                            ),
+                          ],
                         ),
-                        SizedBox(
-                          width: 10,
+                      ),
+                    )
+                  : SizedBox(
+                      width: 160,
+                      child: FloatingActionButton(
+                        heroTag: 'end',
+                        backgroundColor: AppColors.maroon,
+                        onPressed: () {
+                          controller.endShiftDialog();
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(right: 5.0),
+                              child: Icon(
+                                Icons.exit_to_app,
+                                color: AppColors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            AppText(
+                              text: 'end_shift'.tr,
+                              maxLines: 1,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.white,
+                              textAlign: TextAlign.end,
+                            ),
+                          ],
                         ),
-                        AppText(
-                          text: 'New Shift',
-                          maxLines: 1,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.white,
-                          textAlign: TextAlign.end,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                )
-              : SizedBox(
-                  width: 160,
-                  child: FloatingActionButton(
-                    heroTag: 'end',
-                    backgroundColor: AppColors.maroon,
-                    onPressed: () {
-                      controller.endShiftDialog();
-                    },
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(right: 5.0),
-                          child: Icon(
-                            Icons.exit_to_app,
-                            color: AppColors.white,
-                            size: 24,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 10,
-                        ),
-                        AppText(
-                          text: 'End Shift',
-                          maxLines: 1,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.white,
-                          textAlign: TextAlign.end,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-        )),
+            )),
         body: Obx(() {
           if (controller.isLoading.value) {
             return const Center(
@@ -120,7 +120,7 @@ class ShiftView extends GetView<ShiftController> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const AppText(text: 'Unable To Load Data', fontSize: 20),
+                    AppText(text: 'unable_to_load'.tr, fontSize: 20),
                     const SizedBox(
                       height: 80,
                     ),
@@ -137,8 +137,8 @@ class ShiftView extends GetView<ShiftController> {
                         Icons.refresh,
                         color: Colors.white,
                       ),
-                      label: const AppText(
-                        text: 'Try Again',
+                      label: AppText(
+                        text: 'try_again'.tr,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: AppColors.white,
@@ -159,9 +159,9 @@ class ShiftView extends GetView<ShiftController> {
               ),
             );
           } else {
-            return const Center(
+            return Center(
               child: AppText(
-                text: 'No Data Available',
+                text: 'no_data'.tr,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -186,8 +186,7 @@ class ShiftView extends GetView<ShiftController> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const AppText(
-                              text: 'Unable To Load Data', fontSize: 20),
+                          AppText(text: 'unable_to_load'.tr, fontSize: 20),
                           const SizedBox(
                             height: 80,
                           ),
@@ -204,8 +203,8 @@ class ShiftView extends GetView<ShiftController> {
                               Icons.refresh,
                               color: Colors.white,
                             ),
-                            label: const AppText(
-                              text: 'Try Again',
+                            label: AppText(
+                              text: 'try_again'.tr,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: AppColors.white,
@@ -275,7 +274,7 @@ class ShiftView extends GetView<ShiftController> {
                                       child: Row(
                                         children: [
                                           AppText(
-                                            text: 'Queue Configuration',
+                                            text: 'queue_config'.tr,
                                             fontSize: 5.sp,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -290,78 +289,99 @@ class ShiftView extends GetView<ShiftController> {
                                         child: Row(
                                           children: [
                                             Expanded(
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.start,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  AppText(
-                                                    text: 'Queue Count',
-                                                    fontSize: 5.sp,
-                                                    fontWeight:
-                                                        FontWeight.normal,
-                                                  ),
-                                                  AppText(
-                                                    text: 'Call Repeat',
-                                                    fontSize: 5.sp,
-                                                    fontWeight:
-                                                        FontWeight.normal,
-                                                  ),
-                                                  AppText(
-                                                    text: 'Call Delay',
-                                                    fontSize: 5.sp,
-                                                    fontWeight:
-                                                        FontWeight.normal,
-                                                  ),
-                                                  AppText(
-                                                    text: 'Play Ads',
-                                                    fontSize: 5.sp,
-                                                    fontWeight:
-                                                        FontWeight.normal,
-                                                  ),
-                                                ],
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    AppText(
+                                                      text: 'queue_count'.tr,
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                    AppText(
+                                                      text: 'call_count'.tr,
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                    AppText(
+                                                      text: 'call_delay'.tr,
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                    AppText(
+                                                      text: 'call_repeat'.tr,
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                    AppText(
+                                                      text: 'play_video'.tr,
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                             Expanded(
                                               flex: 2,
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.start,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  AppText(
-                                                    text:
-                                                        ': ${controller.detailShift.branch!.queueCount}',
-                                                    fontSize: 5.sp,
-                                                    fontWeight:
-                                                        FontWeight.normal,
-                                                  ),
-                                                  AppText(
-                                                    text:
-                                                        ': ${controller.detailShift.branch!.callCount!}',
-                                                    fontSize: 5.sp,
-                                                    fontWeight:
-                                                        FontWeight.normal,
-                                                  ),
-                                                  AppText(
-                                                    text:
-                                                        ': ${controller.detailShift.branch!.callDelay!}',
-                                                    fontSize: 5.sp,
-                                                    fontWeight:
-                                                        FontWeight.normal,
-                                                  ),
-                                                  AppText(
-                                                    text: controller.detailShift
-                                                            .branch!.playAds!
-                                                        ? ': Yes, play all available video'
-                                                        : ': No, Keep simple',
-                                                    fontSize: 5.sp,
-                                                    fontWeight:
-                                                        FontWeight.normal,
-                                                  ),
-                                                ],
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.start,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    AppText(
+                                                      text:
+                                                          ': ${controller.detailShift.branch!.queueCount} ${'times'.tr}',
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                    AppText(
+                                                      text:
+                                                          ': ${controller.detailShift.branch!.callCount!} ${'times'.tr}',
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                    AppText(
+                                                      text:
+                                                          ': ${controller.detailShift.branch!.callDelay!} ${'seconds'.tr}',
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                    AppText(
+                                                      text:
+                                                          ': ${controller.detailShift.branch!.callRepeat!} ${'times'.tr}',
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                    AppText(
+                                                      text: controller
+                                                              .detailShift
+                                                              .branch!
+                                                              .playAds!
+                                                          ? ': ${'play_video_desc'.tr}'
+                                                          : ': ${'play_video_desc_no'.tr}',
+                                                      fontSize: 5.sp,
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ],
@@ -387,7 +407,7 @@ class ShiftView extends GetView<ShiftController> {
                                                 size: 10.sp),
                                             const SizedBox(width: 5),
                                             AppText(
-                                              text: 'Closed Shift',
+                                              text: 'closed_shift'.tr,
                                               fontSize: 5.sp,
                                               fontWeight: FontWeight.bold,
                                               color: AppColors.maroon,
@@ -433,14 +453,13 @@ class ShiftView extends GetView<ShiftController> {
                                               MainAxisAlignment.spaceEvenly,
                                           children: [
                                             AppText(
-                                                text: 'Recaps',
+                                                text: 'recaps'.tr,
                                                 fontSize: 6.sp,
                                                 fontWeight: FontWeight.bold),
-                                            const Expanded(
+                                            Expanded(
                                                 child: Center(
                                                     child: AppText(
-                                                        text:
-                                                            'No Data Available'))),
+                                                        text: 'no_data'.tr))),
                                           ],
                                         )
                                       : Center(
@@ -772,101 +791,104 @@ class ShiftView extends GetView<ShiftController> {
                                                 ),
                                               ),
                                               Expanded(
-                                                  child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceEvenly,
-                                                children: [
-                                                  Container(
-                                                    width: 1.w,
-                                                    height: 0.5.h,
-                                                    color: QueueStatus
-                                                        .waiting.color,
-                                                  ),
-                                                  AppText(
-                                                    text: QueueStatus
-                                                        .waiting.label,
-                                                    fontSize: 3.5.sp,
-                                                  ),
-                                                  const SizedBox(
-                                                    width: 10,
-                                                  ),
-                                                  Container(
-                                                    width: 1.w,
-                                                    height: 0.5.h,
-                                                    color: QueueStatus
-                                                        .calling.color,
-                                                  ),
-                                                  AppText(
+                                                  child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceEvenly,
+                                                  children: [
+                                                    Container(
+                                                      width: 1.w,
+                                                      height: 0.5.h,
+                                                      color: QueueStatus
+                                                          .waiting.color,
+                                                    ),
+                                                    AppText(
                                                       text: QueueStatus
-                                                          .calling.label,
-                                                      fontSize: 3.5.sp),
-                                                  const SizedBox(
-                                                    width: 10,
-                                                  ),
-                                                  Container(
-                                                    width: 1.w,
-                                                    height: 0.5.h,
-                                                    color: QueueStatus
-                                                        .lastCall.color,
-                                                  ),
-                                                  AppText(
-                                                      text: QueueStatus
-                                                          .lastCall.label,
-                                                      fontSize: 3.5.sp),
-                                                  const SizedBox(
-                                                    width: 10,
-                                                  ),
-                                                  Container(
-                                                    width: 1.w,
-                                                    height: 0.5.h,
-                                                    color: QueueStatus
-                                                        .served.color,
-                                                  ),
-                                                  AppText(
-                                                      text: QueueStatus
-                                                          .served.label,
-                                                      fontSize: 3.5.sp),
-                                                  const SizedBox(
-                                                    width: 10,
-                                                  ),
-                                                  Container(
-                                                    width: 1.w,
-                                                    height: 0.5.h,
-                                                    color: QueueStatus
-                                                        .voided.color,
-                                                  ),
-                                                  AppText(
-                                                      text: QueueStatus
-                                                          .voided.label,
-                                                      fontSize: 3.5.sp),
-                                                  const SizedBox(
-                                                    width: 10,
-                                                  ),
-                                                  Container(
-                                                    width: 1.w,
-                                                    height: 0.5.h,
-                                                    color: QueueStatus
-                                                        .cancelled.color,
-                                                  ),
-                                                  AppText(
-                                                      text: QueueStatus
-                                                          .cancelled.label,
-                                                      fontSize: 3.5.sp),
-                                                  const SizedBox(
-                                                    width: 10,
-                                                  ),
-                                                  Container(
-                                                    width: 1.w,
-                                                    height: 0.5.h,
-                                                    color: QueueStatus
-                                                        .expired.color,
-                                                  ),
-                                                  AppText(
-                                                      text: QueueStatus
-                                                          .expired.label,
-                                                      fontSize: 3.5.sp),
-                                                ],
+                                                          .waiting.label.tr,
+                                                      fontSize: 3.5.sp,
+                                                    ),
+                                                    const SizedBox(
+                                                      width: 10,
+                                                    ),
+                                                    Container(
+                                                      width: 1.w,
+                                                      height: 0.5.h,
+                                                      color: QueueStatus
+                                                          .calling.color,
+                                                    ),
+                                                    AppText(
+                                                        text: QueueStatus
+                                                            .calling.label.tr,
+                                                        fontSize: 3.5.sp),
+                                                    const SizedBox(
+                                                      width: 10,
+                                                    ),
+                                                    Container(
+                                                      width: 1.w,
+                                                      height: 0.5.h,
+                                                      color: QueueStatus
+                                                          .lastCall.color,
+                                                    ),
+                                                    AppText(
+                                                        text: QueueStatus
+                                                            .lastCall.label.tr,
+                                                        fontSize: 3.5.sp),
+                                                    const SizedBox(
+                                                      width: 10,
+                                                    ),
+                                                    Container(
+                                                      width: 1.w,
+                                                      height: 0.5.h,
+                                                      color: QueueStatus
+                                                          .served.color,
+                                                    ),
+                                                    AppText(
+                                                        text: QueueStatus
+                                                            .served.label.tr,
+                                                        fontSize: 3.5.sp),
+                                                    const SizedBox(
+                                                      width: 10,
+                                                    ),
+                                                    Container(
+                                                      width: 1.w,
+                                                      height: 0.5.h,
+                                                      color: QueueStatus
+                                                          .voided.color,
+                                                    ),
+                                                    AppText(
+                                                        text: QueueStatus
+                                                            .voided.label.tr,
+                                                        fontSize: 3.5.sp),
+                                                    const SizedBox(
+                                                      width: 10,
+                                                    ),
+                                                    Container(
+                                                      width: 1.w,
+                                                      height: 0.5.h,
+                                                      color: QueueStatus
+                                                          .cancelled.color,
+                                                    ),
+                                                    AppText(
+                                                        text: QueueStatus
+                                                            .cancelled.label.tr,
+                                                        fontSize: 3.5.sp),
+                                                    const SizedBox(
+                                                      width: 10,
+                                                    ),
+                                                    Container(
+                                                      width: 1.w,
+                                                      height: 0.5.h,
+                                                      color: QueueStatus
+                                                          .expired.color,
+                                                    ),
+                                                    AppText(
+                                                        text: QueueStatus
+                                                            .expired.label.tr,
+                                                        fontSize: 3.5.sp),
+                                                  ],
+                                                ),
                                               ))
                                             ],
                                           ),
@@ -880,8 +902,9 @@ class ShiftView extends GetView<ShiftController> {
                           child: SizedBox(
                             width: double.infinity,
                             child: controller.detailShift.queue == null
-                                ? const Center(
-                                    child: AppText(text: 'No Data Available'))
+                                ? Center(
+                                    child: AppText(text: 'no_data'.tr),
+                                  )
                                 : Card(
                                     color: AppColors.white,
                                     child: CustomScrollView(
@@ -899,7 +922,8 @@ class ShiftView extends GetView<ShiftController> {
                                                     flex: 1,
                                                     child: Center(
                                                       child: AppText(
-                                                          text: "Queue Number",
+                                                          text:
+                                                              "queue_number".tr,
                                                           fontSize: 4.sp,
                                                           maxLines: 2,
                                                           textAlign:
@@ -912,7 +936,7 @@ class ShiftView extends GetView<ShiftController> {
                                                     flex: 2,
                                                     child: Center(
                                                       child: AppText(
-                                                          text: "Created At",
+                                                          text: "created_at".tr,
                                                           fontSize: 4.sp,
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -922,7 +946,7 @@ class ShiftView extends GetView<ShiftController> {
                                                     flex: 1,
                                                     child: Center(
                                                       child: AppText(
-                                                          text: "Quantity",
+                                                          text: "quantity".tr,
                                                           fontSize: 4.sp,
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -932,7 +956,7 @@ class ShiftView extends GetView<ShiftController> {
                                                     flex: 1,
                                                     child: Center(
                                                       child: AppText(
-                                                          text: "Call Count",
+                                                          text: "call_count".tr,
                                                           fontSize: 4.sp,
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -942,7 +966,7 @@ class ShiftView extends GetView<ShiftController> {
                                                     flex: 2,
                                                     child: Center(
                                                       child: AppText(
-                                                          text: "Latest Call",
+                                                          text: "last_call".tr,
                                                           fontSize: 4.sp,
                                                           fontWeight:
                                                               FontWeight.bold,
@@ -986,7 +1010,7 @@ class ShiftView extends GetView<ShiftController> {
                                                         flex: 2,
                                                         child: Center(
                                                           child: AppText(
-                                                             fontSize: 3.5.sp,
+                                                              fontSize: 3.5.sp,
                                                               text: controller
                                                                   .formatDate(controller
                                                                       .detailShift
@@ -999,7 +1023,7 @@ class ShiftView extends GetView<ShiftController> {
                                                         flex: 1,
                                                         child: Center(
                                                           child: AppText(
-                                                             fontSize: 3.5.sp,
+                                                              fontSize: 3.5.sp,
                                                               text: controller
                                                                   .detailShift
                                                                   .queue![index]
@@ -1010,7 +1034,7 @@ class ShiftView extends GetView<ShiftController> {
                                                         flex: 1,
                                                         child: Center(
                                                           child: AppText(
-                                                             fontSize: 3.5.sp,
+                                                              fontSize: 3.5.sp,
                                                               text: controller
                                                                   .detailShift
                                                                   .queue![index]
@@ -1027,27 +1051,32 @@ class ShiftView extends GetView<ShiftController> {
                                                                       .latestCall !=
                                                                   null
                                                               ? AppText(
-                                                                 fontSize: 3.5.sp,
+                                                                  fontSize:
+                                                                      3.5.sp,
                                                                   text: controller.formatDate(controller
                                                                       .detailShift
                                                                       .queue![
                                                                           index]
                                                                       .latestCall
                                                                       .toString()))
-                                                              :  AppText(
-                                                                 fontSize: 3.5.sp,
+                                                              : AppText(
+                                                                  fontSize:
+                                                                      3.5.sp,
                                                                   text: '-'),
                                                         )),
                                                     Expanded(
                                                         flex: 2,
                                                         child: Center(
                                                           child: AppText(
-                                                             fontSize: 3.5.sp,
+                                                              fontSize: 3.5.sp,
                                                               text: controller
-                                                                  .detailShift
-                                                                  .queue![index]
-                                                                  .status
-                                                                  .label,
+                                                                  .adminController
+                                                                  .statusLabel(controller
+                                                                      .detailShift
+                                                                      .queue![
+                                                                          index]
+                                                                      .status
+                                                                      .value).tr,
                                                               color: controller
                                                                   .statusColors(controller
                                                                       .detailShift
@@ -1130,7 +1159,8 @@ class ShiftView extends GetView<ShiftController> {
                                               Row(
                                                 children: [
                                                   AppText(
-                                                    text: 'Total Queue: ',
+                                                    text:
+                                                        'Total ${'queue'.tr}: ',
                                                     fontSize: 4.sp,
                                                     fontWeight:
                                                         FontWeight.normal,
@@ -1247,11 +1277,8 @@ class ShiftView extends GetView<ShiftController> {
                     controller.selectedPageNumber.value = pageNumber;
                     controller.shiftData(pageNumber);
                   },
-                  threshold: 8,
-                  pageTotal: controller.pageTotal.value,
-                  pageInit: controller.selectedPageNumber.value,
-                  colorPrimary: AppColors.black,
-                  colorSub: Colors.white,
+                  totalPages: controller.pageTotal.value,
+                  currentPage: controller.selectedPageNumber.value,
                 ),
               ),
             ),

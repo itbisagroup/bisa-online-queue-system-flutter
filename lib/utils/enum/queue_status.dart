@@ -14,19 +14,19 @@ extension QueueStatusExtension on QueueStatus {
   String get label {
     switch (this) {
       case QueueStatus.waiting:
-        return 'Waiting';
+        return 'waiting';
       case QueueStatus.calling:
-        return 'Calling';
+        return 'calling';
       case QueueStatus.lastCall:
-        return 'Last Call';
+        return 'last_call';
       case QueueStatus.served:
-        return 'Served';
+        return 'served';
       case QueueStatus.voided:
-        return 'Void';
+        return 'void';
       case QueueStatus.cancelled:
-        return 'Cancelled';
+        return 'cancelled';
       case QueueStatus.expired:
-        return 'Expired';
+        return 'expired';
       default:
         return '';
     }

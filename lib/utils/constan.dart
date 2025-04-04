@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class AppColors {
   static const maroon = Color(0xFF78251E);
@@ -11,39 +12,21 @@ class AppColors {
   static const lessBrown = Color(0xFFFFF6E9);
   static const blackCalm = Color.fromRGBO(64, 75, 96, .9);
   static const stroke = Color(0xFFE7E7E7);
+  static const pink = Color(0xFFfef0ef);
 }
 
 class NavigationService {
   static GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 }
 
-class SlackInit {
-  static const String url =
-      'https://hooks.slack.com/services/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';
+class TelegramUrl {
+  static const String localUrl = 'http://bisa-telegram-bot-ci4.192.168.1.66.nip.io/api/v1';
+  static const String liveUrl = 'https://telegrambot.bisagroup.co.id/api/v1';
 }
 
-class MessagesDialogError {
-  static const String createQueue = 'Unable to create queue. Please try again';
-  static const String printQueue = 'Unable to print queue. Please try again';
-  static const String servedQueue =
-      'Unable update status served!. Please try again';
-  static const String voidQueue =
-      'Unable update status void!. Please try again';
-  static const String updateQtyQueue =
-      'Unable update quantity!. Please try again';
-  static const String callQueue =
-      'Unable to call or maybe the queue is already canceled';
+class VersionApp {
+  static const String apkName = 'BISA Online Queue System';
+  static const String version = '1.5.0';
+  static String get copyright => 'BISA Group © ${DateTime.now().year} ${'all_rights_reserved'.tr}';
 }
 
-class MessagesDialogSuccess {
-  static const String servedQueue = 'Status successfully updated to served';
-  static const String voidQueue = 'Status successfully updated to void';
-  static const String updateQtyQueue = 'Quantity successfully updated to';
-}
-
-class MessagesDialogInfo {
-  static const String dialogEndShift =
-      "Don't forget to end the shift. Would you like to end it now?";
-  static const String printerNotSelectet =
-      'Printer is not selected. Please select printer first in setting menu';
-}

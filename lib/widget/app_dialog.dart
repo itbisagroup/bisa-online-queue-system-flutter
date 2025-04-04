@@ -120,7 +120,7 @@ class AppDialog {
       ),
       desc: desc,
       width: 400,
-      btnCancelText: 'Not Now',
+      btnCancelText: 'not_now'.tr,
       btnCancelColor: AppColors.maroon,
       btnCancelOnPress: () {},
      
@@ -271,8 +271,8 @@ class AppDialog {
                                         horizontal: 24),
                                     shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(5)),
-                                    child: const AppText(
-                                        text: "Cancel",
+                                    child:  AppText(
+                                        text: 'cancel'.tr,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
                                         color: AppColors.white),

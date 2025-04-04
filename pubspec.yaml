@@ -56,11 +56,13 @@ dependencies:
   desktop_window: ^0.4.0
   fl_chart: ^0.68.0
   video_player_control_panel: ^1.1.1
-  slack_logger: ^1.0.7
   cached_network_image: ^3.4.1
   widget_and_text_animator: ^1.1.5
-
-
+  retry: ^3.1.2
+  url_launcher: ^6.3.0
+  windows_system_info: ^0.0.4
+  device_info_plus: ^11.0.0
+  file_saver: ^0.2.14
   
   
 dev_dependencies:
@@ -82,6 +84,9 @@ flutter:
   assets:
      - assets/images/nointernet.webp
      - assets/images/novideo.webp
+     - assets/images/us.png
+     - assets/images/id.png
+     - assets/images/newshift.webp
      - assets/sounds/attention.wav
      - assets/sounds/already.wav
      - assets/sounds/lastcall.wav

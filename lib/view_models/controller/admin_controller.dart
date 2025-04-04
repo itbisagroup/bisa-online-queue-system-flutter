@@ -1,18 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:circular_countdown_timer/circular_countdown_timer.dart';
 import 'package:cron/cron.dart';
 import 'package:desktop_window/desktop_window.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_window_close/flutter_window_close.dart';
+import 'package:queue_system/data/response/file_downloader.dart';
 import 'package:queue_system/models/ads.dart';
 import 'package:queue_system/models/branch.dart';
 import 'package:queue_system/models/pax.dart';
 import 'package:queue_system/repository/branch_repository.dart';
 import 'package:queue_system/repository/sync_repository.dart';
 import 'package:queue_system/routes/app_pages.dart';
+import 'package:queue_system/utils/enum/queue_status.dart';
+import 'package:queue_system/utils/enum/treshold.dart';
 import 'package:queue_system/utils/log.dart';
 import 'package:queue_system/view_models/controller/printer_controller.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
@@ -20,24 +22,28 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:queue_system/data/response/status.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:queue_system/models/queue.dart';
 import 'package:queue_system/models/queue_item.dart';
 import 'package:queue_system/utils/audio_player.dart';
 import 'package:queue_system/utils/constan.dart';
 import 'package:queue_system/widget/app_dialog.dart';
 import 'package:queue_system/widget/app_text.dart';
+import 'package:retry/retry.dart';
 import '../../repository/queue_repository.dart';
 
 class AdminController extends GetxController {
   final _apiQueue = QueueRepository();
   final _apiBranch = BranchRepository();
   final LogApp _logApp = LogApp();
+  final Uri _url = Uri.parse(
+      'https://helpdesk.bisagroup.co.id/troubleshoot/bisa-online-queue-system');
+  final cron = Cron();
   final apiSync = SyncRepository();
   final _apiSync = SyncRepository();
   final storage = const FlutterSecureStorage();
   final ads = <Ads>[].obs;
   final branch = Branch().obs;
-
   final paxWithQueue = <PaxWithQueue>[].obs;
   final pax = <Pax>[].obs;
   final withhold = <Withhold>[].obs;
@@ -50,13 +56,15 @@ class AdminController extends GetxController {
   final rxRequestStatus = Status.LOADING.obs;
   final TextEditingController textEditingController = TextEditingController();
   var isLoading = false.obs;
+  var isEnglishApp = true.obs;
+  var isEnglishPrinter = true.obs;
   var withHoldVisible = true.obs;
   var statusSynch = ''.obs;
   var lastSynch = ''.obs;
+  var isCronRunning = false.obs;
   var statusCron = true.obs;
   var lastCrone = ''.obs;
   var buttonRefreshDetail = false.obs;
-
   var statusRealtime = false.obs;
   var color = Colors.black.obs;
   var availableLanguages = <String>[].obs;
@@ -77,15 +85,25 @@ class AdminController extends GetxController {
   @override
   Future<void> onInit() async {
     super.onInit();
+    await branchData();
 
-    await queueListApi();
     final title = await storage.read(key: 'env_title');
     final label = await storage.read(key: 'env_label');
+    final langApp = await storage.read(key: 'lang');
+    final langPrinter = await storage.read(key: 'lang_print');
+    final autoFullscreen = await storage.read(key: 'auto_fullscreen');
+    final autoFullScreenTimer =
+        await storage.read(key: 'auto_fullscreen_timer');
+    final adsMuted = await storage.read(key: 'ads_muted');
+    isEnglishApp.value = langApp == 'en' ? true : false;
+    isEnglishPrinter.value = langPrinter == 'en' ? true : false;
     final videoPath = await storage.read(key: 'env_path');
-    if (title == null || label == null) {
+    if (title == null) {
       await storage.write(key: 'env_title', value: 'Nomor Antrian');
+    }
+    if (label == null) {
       await storage.write(
-          key: 'env_label', value: 'Silahkan Konfirmasi ke Greeter');
+          key: 'env_label', value: 'Silakan Konfirmasi ke Greeter');
     }
     if (videoPath == null) {
       await storage.write(
@@ -93,8 +111,28 @@ class AdminController extends GetxController {
           value: 'd:/laragon/www/bisa-online-queue/public/assets/ads/');
     }
 
-    runCronTask();
-    timerDialogEndShift();
+    if (autoFullScreenTimer == null) {
+      await storage.write(key: 'auto_fullscreen_timer', value: '2');
+    }
+    if (adsMuted == null) {
+      await storage.write(key: 'ads_muted', value: '1');
+    }
+    if (autoFullscreen == null) {
+      await storage.write(key: 'auto_fullscreen', value: '1');
+    }
+    final shift = await const FlutterSecureStorage().read(key: 'shift_date');
+    if (shift != null) {
+      DateTime targetDate = DateTime.parse(shift);
+      DateTime now = DateTime.now();
+
+      if (now.year > targetDate.year ||
+          (now.year == targetDate.year && now.month > targetDate.month) ||
+          (now.year == targetDate.year &&
+              now.month == targetDate.month &&
+              now.day > targetDate.day)) {
+        await dialogEndShift();
+      }
+    }
     FlutterWindowClose.setWindowShouldCloseHandler(() async {
       if (_isDialogOpen.value) {
         return false;
@@ -104,8 +142,8 @@ class AdminController extends GetxController {
         context: NavigationService.navigatorKey.currentContext!,
         builder: (context) {
           return AlertDialog(
-            title: const AppText(
-              text: 'Do you really want to quit?',
+            title: AppText(
+              text: 'quit_message'.tr,
               fontSize: 20,
               fontWeight: FontWeight.normal,
             ),
@@ -119,8 +157,8 @@ class AdminController extends GetxController {
                   }
                   Navigator.of(context).pop(true);
                 },
-                child: const AppText(
-                  text: 'Yes',
+                child: AppText(
+                  text: 'yes'.tr,
                   fontSize: 16,
                   fontWeight: FontWeight.normal,
                 ),
@@ -130,8 +168,8 @@ class AdminController extends GetxController {
                   _isDialogOpen.value = false;
                   Navigator.of(context).pop(false);
                 },
-                child: const AppText(
-                  text: 'No',
+                child: AppText(
+                  text: 'no'.tr,
                   fontSize: 16,
                   fontWeight: FontWeight.normal,
                 ),
@@ -145,69 +183,56 @@ class AdminController extends GetxController {
     });
   }
 
-  timerDialogEndShift() async {
-    final String? shiftDate = await storage.read(key: 'shift_date');
-    String formattedDate = DateFormat('yyyy-MM-dd').format(currentTime.value);
-
-    if (shiftDate != formattedDate && shiftDate != null) {
-      Future.delayed(const Duration(seconds: 5), () {
-        AppDialog.showToastShiftEnd(
-            title: "Info",
-            desc:
-                "Don't forget to end the shift. Would you like to end it now?",
-            ok: () {
-              Get.toNamed(Routes.shift);
-            });
-      });
-    }
+  dialogEndShift() async {
+    Future.delayed(const Duration(seconds: 5), () {
+      AppDialog.showToastShiftEnd(
+          title: "Info",
+          desc: "forget_end_shift".tr,
+          ok: () {
+            Get.toNamed(Routes.shift);
+          });
+    });
   }
 
   void setRxRequestStatus(Status value) => rxRequestStatus.value = value;
   void setError(String value) => error.value = value;
 
-  void runCronTask() {
-    var cron = Cron();
-    bool? previousStatus;
-    int errorCount = 0;
+  void runCronTask(bool cronRunning) {
+    if (cronRunning) {
+      isCronRunning.value = cronRunning;
 
-    cron.schedule(Schedule.parse('* * * * *'), () async {
-      try {
-        await apiSync.sendData();
-        statusCron.value = true;
-        lastCrone.value = DateFormat('hh:mm').format(DateTime.now());
+      int errorCount = 0;
 
-        if (previousStatus != true) {
-          _logApp.sendSlackLog(branch.value.fullName!, "cron running");
-        }
+      cron.schedule(Schedule.parse('* * * * *'), () async {
+        try {
+          await apiSync.sendData();
+          statusCron.value = true;
+          lastCrone.value = DateFormat('HH:mm').format(DateTime.now());
+          if (errorCount > 15) {
+            await _logApp.writeLog(
+                'Success, CRON is running after $errorCount failed attempts');
 
-        previousStatus = true;
-        errorCount = 0;
-      } catch (error) {
-        errorCount++;
-        statusCron.value = false;
-        lastCrone.value = DateFormat('hh:mm').format(DateTime.now());
-
-        if (previousStatus != false) {
-          await _logApp.writeLog("Failed cron ${error.toString()}");
-          _logApp.sendSlackLog(
-              branch.value.fullName!, "Failed cron ${error.toString()}");
-        }
-        if (errorCount >= 5) {
-          await apiSync.flushParameter().then((value) {
-            _logApp.sendSlackLog(branch.value.fullName!,
-                "Flush parameter cron ${value.toString()}");
-          }).onError((error, stackTrace) async {
-            await _logApp
-                .writeLog("Failed flush parameter cron ${error.toString()}");
-            _logApp.sendSlackLog(branch.value.fullName!,
-                "Failed flush parameter cron ${error.toString()}");
-          });
+            errorCount = 0;
+          }
           errorCount = 0;
-        }
+        } catch (error) {
+          errorCount++;
+          statusCron.value = false;
+          lastCrone.value = DateFormat('HH:mm').format(DateTime.now());
 
-        previousStatus = false;
-      }
-    });
+          if (errorCount % 5 == 0) {
+            await apiSync
+                .flushParameter()
+                .then((value) {})
+                .onError((error, stackTrace) async {});
+          }
+          if (errorCount % 20 == 0) {
+            await _logApp.writeLog(
+                '${error.toString()} CRON has failed $errorCount times');
+          }
+        }
+      });
+    }
   }
 
   Future<void> openSecondaryWindow() async {
@@ -252,6 +277,47 @@ class AdminController extends GetxController {
     return queue;
   }
 
+  List<String?> clearQueueNumbers() {
+    List<String?> notation =
+        paxWithQueue.map((paxWithQueue) => paxWithQueue.pax?.notation).toList();
+
+    List<String?> queue = paxWithQueue
+        .map((paxWithQueue) => paxWithQueue.queue?.queueNumber)
+        .toList();
+
+    for (int i = 0; i < queue.length; i++) {
+      if (queue[i] != null && queue[i] != "0000") {
+        // Replace the number part of the queue with "000" while keeping the notation
+        queue[i] = "${notation[i]}000";
+      }
+    }
+    return queue;
+  }
+
+  List<String?> clearAllNextQueueNumbers() {
+    List<String?> notation =
+        paxWithQueue.map((paxWithQueue) => paxWithQueue.pax?.notation).toList();
+
+    List<String?> queue = paxWithQueue
+        .map((paxWithQueue) => paxWithQueue.queue?.nextQueue)
+        .toList();
+
+    for (int i = 0; i < queue.length; i++) {
+      if (queue[i] != null && queue[i] != "0000") {
+        queue[i] = "${notation[i]}000";
+      }
+    }
+    return queue;
+  }
+
+  List<String> getAllWithholdQueueNumbers() {
+    // Filter out entries with queueNumber "0000" and map to a list of queueNumbers
+    return withhold
+        .where((item) => item.queueNumber != "0000")
+        .map((item) => item.queueNumber!)
+        .toList();
+  }
+
   List<String?> getAllNextQueueNumbers() {
     List<String?> notation =
         paxWithQueue.map((paxWithQueue) => paxWithQueue.pax?.notation).toList();
@@ -273,16 +339,29 @@ class AdminController extends GetxController {
     return ads.map((ad) => ad.content).toList();
   }
 
+  List<String?> getAllAdsid() {
+    return ads.map((ad) => ad.id).toList();
+  }
+
   Future<void> updateQueueSecondaryWindows() async {
     // Get all queue numbers
     List<String?> queueNumbers = getAllQueueNumbers();
     List<String?> queueNextNumbers = getAllNextQueueNumbers();
+    List<String> withholdQueueNumbers = getAllWithholdQueueNumbers();
     String jsonDataList = jsonEncode(queueNumbers);
     String nextQueue = jsonEncode(queueNextNumbers);
 
     for (var windowID in secondaryWindowIDs) {
       DesktopMultiWindow.invokeMethod(windowID, "updateQueue", jsonDataList);
       DesktopMultiWindow.invokeMethod(windowID, "nextQueue", nextQueue);
+      DesktopMultiWindow.invokeMethod(
+          windowID, "withholdQueue", jsonEncode(withholdQueueNumbers));
+    }
+  }
+
+  Future<void> clearQueueSecondaryWindows() async {
+    for (var windowID in secondaryWindowIDs) {
+      DesktopMultiWindow.invokeMethod(windowID, "endShift", '1');
     }
   }
 
@@ -311,20 +390,20 @@ class AdminController extends GetxController {
   void sync() async {
     statusSynch.value = 'Syncing...';
     lastSynch.value = '';
-    await branchData();
-    await updateQueueListApi();
+    await updateBranchData();
 
     if (secondaryWindowIDs.isNotEmpty) {
       await updateDataSecondaryWindows();
       await updateQueueSecondaryWindows();
     }
     _apiSync.getData().then((value) async {
-      statusSynch.value = 'Synced';
-      lastSynch.value = DateFormat('dd/MM/yyyy hh:mm').format(DateTime.now());
+      statusSynch.value = 'succeed_sync_data'.tr;
+      lastSynch.value = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
     }).onError((error, stackTrace) async {
-      await _logApp.writeLog(" Failed syncing ${error.toString()}");
-      statusSynch.value = 'Failed[$error]';
-      lastSynch.value = DateFormat('dd/MM/yyyy hh:mm').format(DateTime.now());
+      logCase(error.toString(),
+          'Failed to synchronize data application from the live server API');
+      statusSynch.value = '${'failed_sync_data'.tr} $error';
+      lastSynch.value = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
     });
   }
 
@@ -334,11 +413,14 @@ class AdminController extends GetxController {
     String callCount = jsonEncode(queueCount);
     List<String?> queueNextNumbers = getAllNextQueueNumbers();
     String nextQueue = jsonEncode(queueNextNumbers);
+    List<String> withholdQueueNumbers = getAllWithholdQueueNumbers();
 
     for (var windowID in secondaryWindowIDs) {
       DesktopMultiWindow.invokeMethod(windowID, "callCount", callCount);
       DesktopMultiWindow.invokeMethod(windowID, "callQueue", numberTextView);
       DesktopMultiWindow.invokeMethod(windowID, "nextQueue", nextQueue);
+      DesktopMultiWindow.invokeMethod(
+          windowID, "withholdQueue", jsonEncode(withholdQueueNumbers));
     }
   }
 
@@ -364,11 +446,12 @@ class AdminController extends GetxController {
     String address = jsonEncode(branch.value.address);
     String city = jsonEncode(branch.value.city);
     String province = jsonEncode(branch.value.province);
+    String lang = jsonEncode(isEnglishApp.value ? 'en' : 'id');
     for (var windowID in secondaryWindowIDs) {
       if (ads.isNotEmpty) {
         DesktopMultiWindow.invokeMethod(windowID, "updateAds", jsonAdsList);
       }
-
+      DesktopMultiWindow.invokeMethod(windowID, "lang", lang);
       DesktopMultiWindow.invokeMethod(windowID, "updateFullname", fullName);
       DesktopMultiWindow.invokeMethod(windowID, "callRepeat", callRepeat);
       DesktopMultiWindow.invokeMethod(windowID, "updateLogo", logo);
@@ -457,13 +540,15 @@ class AdminController extends GetxController {
     }
   }
 
-  Future<void> branchData() async {
+  Future<void> updateBranchData() async {
+    AppDialog.showDialogLoading();
     _apiBranch.getBranch().then((value) async {
+      Get.back();
       branch.refresh();
       ads.clear();
       pax.clear();
       branch.value = Branch.fromJson(value);
-
+      await updateQueueListApi();
       final List<dynamic> listPax = value['data']['pax'];
       pax.addAll(listPax.map((json) => Pax.fromJson(json)).toList());
 
@@ -471,39 +556,169 @@ class AdminController extends GetxController {
       ads.addAll(listAds.map((json) => Ads.fromJson(json)).toList());
     }).onError((error, stackTrace) async {
       setError(error.toString());
-      await _logApp.writeLog(" Failed get branch API ${error.toString()}");
+      logCase(error.toString(),
+          'Failed reinitiate the application. Can not get branch data from the Local Server API');
+      Get.back();
+      setRxRequestStatus(Status.ERROR);
+    });
+  }
+
+  Future<void> branchData() async {
+    setRxRequestStatus(Status.LOADING);
+    await Future.delayed(const Duration(seconds: 5));
+    _apiBranch.getBranch().then((value) async {
+      branch.refresh();
+      ads.clear();
+      pax.clear();
+      await queueListApi();
+      branch.value = Branch.fromJson(value);
+
+      final List<dynamic> listPax = value['data']['pax'];
+      pax.addAll(listPax.map((json) => Pax.fromJson(json)).toList());
+
+      final List<dynamic> listAds = value['data']['ads'];
+      ads.addAll(listAds.map((json) => Ads.fromJson(json)).toList());
+      setRxRequestStatus(Status.COMPLETED);
+    }).onError((error, stackTrace) async {
+      setError(error.toString());
+      logCase(error.toString(),
+          'Failed to open the application. Can not get branch data from the Local Server API');
       setRxRequestStatus(Status.ERROR);
     });
   }
 
   Future<void> queueListApi() async {
-    await branchData();
     _apiQueue.getDetailQueue().then((value) async {
       if (pax.isNotEmpty) {
         paxWithQueue.addAll(pax.map((json) {
-          // Mencari current queue untuk pax tertentu
           final queue = Queue.fromJson(value['data']['queue']['current']
               .firstWhere((element) => element.keys.first == json.id,
                   orElse: () => {}));
-          final withhold = Withhold.fromJson(value['data']['queue']['withhold']
+
+          // Retrieve a list of Withhold entries for each pax
+          final withholdEntries = Withhold.listFromJson(value['data']['queue']
+                  ['withhold']
               .firstWhere((element) => element.keys.first == json.id,
                   orElse: () => {}));
 
-          return PaxWithQueue(pax: json, queue: queue, withhold: withhold);
+          // Add each pax's withhold entries to the global withhold list
+          // Add non-"0000" queueNumbers to withhold list
+          withhold.addAll(
+              withholdEntries.where((item) => item.queueNumber != "0000"));
+
+          return PaxWithQueue(
+              pax: json, queue: queue, withhold: withholdEntries);
         }).toList());
       }
-
-      withhold.addAll(paxWithQueue
-          .map((paxWithQueue) => paxWithQueue.withhold!)
-          .where((item) => item.queueNumber != "0000")
-          .toList());
-
-      setRxRequestStatus(Status.COMPLETED);
+      runCronTask(true);
     }).onError((error, stackTrace) async {
       setError(error.toString());
-      await _logApp.writeLog(" Failed get queue view API ${error.toString()}");
+      logCase(error.toString(),
+          'Failed to get current queue view from the local server API');
       setRxRequestStatus(Status.ERROR);
     });
+  }
+
+  void logCase(String error, String message) async {
+    String? branchKey = await storage.read(key: 'key');
+    if (branchKey != null) {
+      branchKey = branchKey.substring(0, branchKey.indexOf(':'));
+    }
+
+    // Retry function for sending Telegram logs
+    Future<void> sendTelegramLogWithRetry(
+        String logMessage, String label) async {
+      const r = RetryOptions(maxAttempts: 3); // Retry up to 3 times
+      await r.retry(
+        () => _logApp.sendTelegramLog(logMessage, label),
+      );
+    }
+
+    switch (error) {
+      case 'No Internet':
+        await sendTelegramLogWithRetry(
+            '$branchKey : SERVER NOT ACTIVE. $message',
+            ThresholdError.emergency.label);
+        await _logApp.writeLog('$branchKey: ["Server Not Active"] :$message');
+        if (kDebugMode) {
+          print('$branchKey :["Server Not Active"] :$message');
+        }
+        break;
+
+      case 'Request Timed Out':
+        await sendTelegramLogWithRetry(
+            '$branchKey : $error, $message', ThresholdError.warning.label);
+        await _logApp.writeLog('$branchKey :[$error]$message');
+        if (kDebugMode) {
+          print('$branchKey :[$error] $message');
+        }
+        break;
+
+      case 'Internal Server Error':
+        await sendTelegramLogWithRetry(
+            '$branchKey : $error, $message', ThresholdError.emergency.label);
+        await _logApp.writeLog('$branchKey:[$error] $message');
+        if (kDebugMode) {
+          print('$branchKey :[$error] $message');
+        }
+        break;
+
+      case 'Unauthorized':
+        await sendTelegramLogWithRetry(
+            '$branchKey : $error, $message', ThresholdError.critical.label);
+        await _logApp.writeLog('$branchKey:[$error] $message');
+        if (kDebugMode) {
+          print('$branchKey :[$error] $message');
+        }
+        break;
+
+      case 'Forbidden':
+        await _logApp.writeLog('$branchKey:[$error] $message');
+        break;
+
+      case 'Bad Gateway':
+        await sendTelegramLogWithRetry(
+            '$branchKey : $error, $message', ThresholdError.warning.label);
+        await _logApp.writeLog('$branchKey:[$error] $message');
+        if (kDebugMode) {
+          print('$branchKey :[$error] $message');
+        }
+        break;
+
+      case 'Too Many Requests':
+        await sendTelegramLogWithRetry(
+            '$branchKey : Too Many Requests, $message',
+            ThresholdError.warning.label);
+        await _logApp.writeLog('$branchKey:[$error] $message');
+        if (kDebugMode) {
+          print('$branchKey [$error] $message');
+        }
+        break;
+
+      case 'Success':
+        await sendTelegramLogWithRetry(
+            '$branchKey : $message', ThresholdError.info.label);
+        await _logApp.writeLog('$branchKey $message');
+        if (kDebugMode) {
+          print('$branchKey: [$error] $message');
+        }
+        break;
+
+      case '500':
+        await sendTelegramLogWithRetry(
+            '$branchKey : $message', ThresholdError.emergency.label);
+        await _logApp.writeLog('$branchKey $message');
+        if (kDebugMode) {
+          print('$branchKey: [$error] $message');
+        }
+        break;
+
+      default:
+        await _logApp.writeLog('$branchKey$error $message');
+        if (kDebugMode) {
+          print('$branchKey: [$error] $message');
+        }
+    }
   }
 
   Future<void> updateQueueListApi() async {
@@ -517,26 +732,30 @@ class AdminController extends GetxController {
           final queue = Queue.fromJson(value['data']['queue']['current']
               .firstWhere((element) => element.keys.first == json.id,
                   orElse: () => {}));
-          final withhold = Withhold.fromJson(value['data']['queue']['withhold']
+
+          // Retrieve a list of Withhold entries for each pax
+          final withholdEntries = Withhold.listFromJson(value['data']['queue']
+                  ['withhold']
               .firstWhere((element) => element.keys.first == json.id,
                   orElse: () => {}));
 
-          return PaxWithQueue(pax: json, queue: queue, withhold: withhold);
+          // Add non-"0000" queueNumbers to withhold list
+          withhold.addAll(
+              withholdEntries.where((item) => item.queueNumber != "0000"));
+
+          return PaxWithQueue(
+              pax: json, queue: queue, withhold: withholdEntries);
         }).toList());
       }
-
-      withhold.addAll(paxWithQueue
-          .map((paxWithQueue) => paxWithQueue.withhold!)
-          .where((item) => item.queueNumber != "0000")
-          .toList());
-
       Get.back();
+      isCronRunning.value ? runCronTask(false) : runCronTask(true);
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) async {
       setRxRequestStatus(Status.ERROR);
       setError(error.toString());
       Get.back();
-      await _logApp.writeLog(" Failed get queue view API ${error.toString()}");
+      logCase(error.toString(),
+          'Failed to reinitiate get current data queue view from the local server API');
     });
   }
 
@@ -563,7 +782,8 @@ class AdminController extends GetxController {
         allQueue.clear();
       }
       setError(error.toString());
-      await _logApp.writeLog(" Failed get queue index API ${error.toString()}");
+      logCase(error.toString(),
+          'Failed to get all queue data from the local server API');
     });
   }
 
@@ -581,8 +801,8 @@ class AdminController extends GetxController {
     }).onError((error, stackTrace) async {
       isLoading(false);
       setError(error.toString());
-      await _logApp
-          .writeLog(" Failed search queue index API ${error.toString()}");
+      logCase(error.toString(),
+          'Failed to search=$search queue index API from the local server API');
     });
   }
 
@@ -597,6 +817,26 @@ class AdminController extends GetxController {
       return AppColors.red;
     } else {
       return AppColors.blackCalm;
+    }
+  }
+
+  String statusLabel(int value) {
+    if (value == 1) {
+      return QueueStatus.waiting.label;
+    } else if (value == 2) {
+      return QueueStatus.calling.label;
+    } else if (value == 3) {
+      return QueueStatus.lastCall.label;
+    } else if (value == 4) {
+      return QueueStatus.served.label;
+    } else if (value == 7) {
+      return QueueStatus.voided.label;
+    } else if (value == 8) {
+      return QueueStatus.cancelled.label;
+    } else if (value == 9) {
+      return QueueStatus.expired.label;
+    } else {
+      return '';
     }
   }
 
@@ -619,7 +859,7 @@ class AdminController extends GetxController {
       return '';
     }
     DateTime dateTime = DateTime.parse(dateString);
-    return DateFormat('dd/MM/yyyy hh:mm').format(dateTime);
+    return DateFormat('dd/MM/yyyy HH:mm').format(dateTime);
   }
 
   Future<void> newQueue(String paxId, String paxQuantity) async {
@@ -629,13 +869,12 @@ class AdminController extends GetxController {
       final queueId = value['data']['queue']['queueCode'];
       String queueNumber = value['data']['queue']['queueNumber'];
       doFullscreen();
-
       await AppDialog.showToastSuccess(
         title: queueNumber,
-        desc: 'Queue $queueNumber created succesfuly',
+        desc: '${'queue'.tr} $queueNumber ${'success_create'.tr} ',
         func: () async {
           await updateQueueListApi();
-          await updateNextQueue();
+          // await updateNextQueue();
           await printQueue(queueId);
           enableAddButton(paxId);
         },
@@ -646,13 +885,11 @@ class AdminController extends GetxController {
       setError(error.toString());
       enableAddButton(paxId);
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc: 'Unable to create queue. Please try again',
-        func: () async {
-          await _logApp
-              .writeLog(" Failed create queue API ${error.toString()}");
-          await _logApp.sendSlackLog(branch.value.fullName!,
-              "Failed create queue API ${error.toString()}");
+        title: 'failed'.tr,
+        desc: 'unable_to_create_queue'.tr,
+        func: () {
+          logCase(error.toString(),
+              'Failed to create new queue to the local server API');
         },
       );
     });
@@ -665,20 +902,24 @@ class AdminController extends GetxController {
       final number = value['data']['queue']['queueNumber'];
       final cancelCode = value['data']['queue']['cancelCode'];
       final qrData = value['data']['queue']['queueCode'];
+      final queueCall = value['data']['queue']['branch']['callCount'];
+
+      if (printer.ipController.text.isNotEmpty) {
+        printer.setIpAddress(printer.ipController.text);
+      }
       await printer.printQueue(
-          branch.value.fullName!, qrData, number, cancelCode);
+          branch.value.fullName!, qrData, number, cancelCode, queueCall);
 
       setRxRequestStatus(Status.COMPLETED);
     }).onError((error, stackTrace) async {
       setError(error.toString());
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc: 'Unable to print queue. Please try again',
+        title: 'failed'.tr,
+        desc: 'unable_to_print_queue'.tr,
         func: () async {
           Get.back();
-          await _logApp.writeLog(" Failed print queue API ${error.toString()}");
-          await _logApp.sendSlackLog(branch.value.fullName!,
-              "Failed print queue API ${error.toString()}");
+          logCase(error.toString(),
+              'Failed to print queue');
         },
       );
     });
@@ -694,7 +935,7 @@ class AdminController extends GetxController {
       doFullscreen();
       await AppDialog.showToastSuccess(
         title: number,
-        desc: 'Status successfully updated to served',
+        desc: 'update_serve'.tr,
         func: () async {
           enableButton(paxId);
           await enableUpdateStatus(paxId);
@@ -707,13 +948,11 @@ class AdminController extends GetxController {
       setError(error.toString());
       enableUpdateStatus(paxId);
       AppDialog.showToastError(
-          title: 'Failed!',
-          desc: 'Unable update status served!. Please try again',
+          title: 'failed'.tr,
+          desc: 'failed_serve'.tr,
           func: () async {
-            await _logApp.writeLog(
-                " Failed to update status served queue view API ${error.toString()}");
-            await _logApp.sendSlackLog(branch.value.fullName!,
-                "Failed to update status served queue ${error.toString()}");
+            logCase(error.toString(),
+                ' Failed to update status served queue to the local server API');
           });
     });
   }
@@ -725,13 +964,10 @@ class AdminController extends GetxController {
     disableUpdateStatus(paxId);
     _apiQueue.addStatusQueue(queueId, '7').then((value) async {
       final number = value['data']['queue']['queueNumber'];
-      if (kDebugMode) {
-        print('void Queue Number: $number');
-      }
       doFullscreen();
       await AppDialog.showToastSuccess(
         title: number,
-        desc: 'Status successfully updated to void',
+        desc: 'update_void'.tr,
         func: () async {
           await updateQueueListApi();
         },
@@ -744,13 +980,11 @@ class AdminController extends GetxController {
       enableUpdateStatus(paxId);
       setError(error.toString());
       AppDialog.showToastError(
-          title: 'Failed!',
-          desc: 'Unable update status void!. Please try again',
+          title: 'failed'.tr,
+          desc: 'failed_void'.tr,
           func: () async {
-            await _logApp.writeLog(
-                " Failed to update status void queue view API ${error.toString()}");
-            await _logApp.sendSlackLog(branch.value.fullName!,
-                "Failed to update status void queue view API ${error.toString()}");
+            logCase(error.toString(),
+                ' Failed to update status void queue to the local server API');
           });
     });
   }
@@ -765,7 +999,7 @@ class AdminController extends GetxController {
       final number = value['data']['queue']['queueNumber'];
       await AppDialog.showToastSuccess(
         title: number,
-        desc: 'Status successfully updated to served',
+        desc: 'update_serve'.tr,
         func: () async {
           await updateQueueListApi();
         },
@@ -774,11 +1008,11 @@ class AdminController extends GetxController {
       setError(error.toString());
       Get.back();
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc: 'Unable update status served!. Please try again',
+        title: 'failed'.tr,
+        desc: 'failed_serve'.tr,
         func: () async {
-          await _logApp.writeLog(
-              " Failed to update status served queue Withold API ${error.toString()}");
+          logCase(error.toString(),
+              ' Failed to update status served queue to the local server API');
         },
       );
     });
@@ -797,7 +1031,7 @@ class AdminController extends GetxController {
       }
       await AppDialog.showToastSuccess(
           title: number,
-          desc: 'Status successfully updated to void',
+          desc: 'update_void'.tr,
           func: () async {
             await updateQueueListApi();
           });
@@ -805,11 +1039,11 @@ class AdminController extends GetxController {
       Get.back();
       setError(error.toString());
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc: 'Unable update status void!. Please try again',
+        title: 'failed'.tr,
+        desc: 'failed_void'.tr,
         func: () async {
-          await _logApp.writeLog(
-              " Failed to update status void queue withhold API ${error.toString()}");
+          logCase(error.toString(),
+              ' Failed to update status void queue to the local server API');
         },
       );
     });
@@ -825,7 +1059,7 @@ class AdminController extends GetxController {
       final number = value['data']['queue']['queueNumber'];
       await AppDialog.showToastSuccess(
           title: number,
-          desc: 'Quantity successfully updated to $qty',
+          desc: '${'update_qty'.tr} $qty',
           func: () async {
             await apiQueueDetailList();
             await updateQueueListApi();
@@ -834,13 +1068,11 @@ class AdminController extends GetxController {
       setError(error.toString());
       Get.back();
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc: 'Unable update quantity!. Please try again',
+        title: 'failed'.tr,
+        desc: 'failed_qty'.tr,
         func: () async {
-          await _logApp
-              .writeLog(" Failed to update qty queue API ${error.toString()}");
-          await _logApp.sendSlackLog(branch.value.fullName!,
-              "Failed to update qty queue API ${error.toString()}");
+          logCase(error.toString(),
+              ' Failed to update quantity queue to the local server API');
         },
       );
     });
@@ -856,7 +1088,7 @@ class AdminController extends GetxController {
       final number = value['data']['queue']['queueNumber'];
       await AppDialog.showToastSuccess(
           title: number,
-          desc: 'Status successfully updated to served',
+          desc: 'update_serve'.tr,
           func: () async {
             await apiQueueDetailList();
             await updateQueueListApi();
@@ -865,13 +1097,11 @@ class AdminController extends GetxController {
       setError(error.toString());
       Get.back();
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc: 'Unable update status served!. Please try again',
+        title: 'failed'.tr,
+        desc: 'failed_serve'.tr,
         func: () async {
-          await _logApp.writeLog(
-              " Failed to update status served queue detail API ${error.toString()}");
-          await _logApp.sendSlackLog(branch.value.fullName!,
-              "Failed to update status served queue detail API ${error.toString()}");
+          logCase(error.toString(),
+              ' Failed to update status served queue to the local server API');
         },
       );
     });
@@ -890,7 +1120,7 @@ class AdminController extends GetxController {
       }
       await AppDialog.showToastSuccess(
           title: number,
-          desc: 'Status successfully updated to void',
+          desc: 'update_void'.tr,
           func: () async {
             await apiQueueDetailList();
             await updateQueueListApi();
@@ -899,13 +1129,11 @@ class AdminController extends GetxController {
       Get.back();
       setError(error.toString());
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc: 'Unable update status void!. Please try again',
+        title: 'failed'.tr,
+        desc: 'failed_void'.tr,
         func: () async {
-          await _logApp.writeLog(
-              " Failed to update status void queue detail API ${error.toString()}");
-          await _logApp.sendSlackLog(branch.value.fullName!,
-              "Failed to update status void queue detail API  ${error.toString()}");
+          logCase(error.toString(),
+              ' Failed to update status served queue to the local server API');
         },
       );
     });
@@ -935,19 +1163,18 @@ class AdminController extends GetxController {
       if (secondaryWindowIDs.isEmpty) {
         AppDialog.showToastSuccess(
             title: queueNumberCall,
-            desc: 'Queue $queueNumberCall called succesfuly',
+            desc: '${'queue'.tr} $queueNumberCall ${'called'.tr}',
             func: () async {
               await updateQueueListApi();
             });
         await callSpeakFunction(letters, number, queueCount);
-
         setRxRequestStatus(Status.COMPLETED);
       } else {
         await callSecondaryWindows(queueNumberCall, queueCount);
         doFullscreen();
         await AppDialog.showToastSuccess(
           title: queueNumberCall,
-          desc: 'Queue $queueNumberCall called succesfuly',
+          desc: '${'queue'.tr} $queueNumberCall ${'called'.tr}',
           func: () async {
             await updateQueueListApi();
           },
@@ -957,17 +1184,21 @@ class AdminController extends GetxController {
     }).onError((error, stackTrace) {
       enableButton(paxId);
       setError(error.toString());
+      String cleanedMessage = error.toString().replaceAll(RegExp(r'[{}]'), '');
+      List<String> keyValue = cleanedMessage.split(': ');
+      String message = keyValue[1];
+      if (error.toString().contains('no_queue'.tr)) {
+        message = 'canceled_queue'.tr;
+      } else {
+        message = 'failed_call'.tr;
+      }
       AppDialog.showToastError(
-        title: 'Failed!',
-        desc:
-            'Unable to call or maybe the queue is already canceled  \n[$error]',
+        title: 'failed'.tr,
+        desc: message,
         func: () async {
-          await updateQueueListApi();
-
-          await _logApp
-              .writeLog(" Failed to call queue detail API ${error.toString()}");
-          await _logApp.sendSlackLog(branch.value.fullName!,
-              "Failed to call queue detail API ${error.toString()}");
+          if (error.toString().contains('no queue')) {
+            await updateQueueListApi();
+          }
         },
       );
     });
@@ -1010,6 +1241,7 @@ class AdminController extends GetxController {
         await audioPlayer.playPlaylist([
           'assets/sounds/attention.wav',
           'assets/sounds/lastcall.wav',
+          'assets/sounds/alphabet/$letters.wav',
           'assets/sounds/number/$firstDigit.wav',
           'assets/sounds/number/$secondDigit.wav',
           'assets/sounds/number/$thirdDigit.wav',
@@ -1019,6 +1251,7 @@ class AdminController extends GetxController {
         await audioPlayer.playPlaylist([
           'assets/sounds/attention.wav',
           'assets/sounds/calling.wav',
+          'assets/sounds/alphabet/$letters.wav',
           'assets/sounds/number/$firstDigit.wav',
           'assets/sounds/number/$secondDigit.wav',
           'assets/sounds/number/$thirdDigit.wav',
@@ -1027,11 +1260,10 @@ class AdminController extends GetxController {
       }
     } else {
       AppDialog.showToastError(
-          title: 'To much number!',
-          desc: 'The number is too long to call!',
+          title: 'too_much_number'.tr,
+          desc: 'too_much_number_desc'.tr,
           func: () async {
-            await _logApp.writeLog(
-                " Failed to update status served queue detail API ${error.toString()}");
+            logCase('-', ' The number is too long to call ($number)');
           });
     }
   }
@@ -1043,8 +1275,8 @@ class AdminController extends GetxController {
   ) {
     if (value == 'served') {
       AppDialog.confirmationMsg(
-        title: "Served Queue",
-        message: "Are you sure you want to update the status to 'Served'?",
+        title: "${'served'.tr} ${'queue'.tr}",
+        message: "sure_to_serve".tr,
         function: () async {
           await servedQueue(queueId, paxId);
           Get.back();
@@ -1053,8 +1285,8 @@ class AdminController extends GetxController {
       );
     } else if (value == 'void') {
       AppDialog.confirmationMsg(
-        title: "Void Queue",
-        message: "Are you sure you want to update the status to 'Void'?",
+        title: "${'void'.tr} ${'queue'.tr}",
+        message: "sure_to_void".tr,
         function: () async {
           await voidQueue(queueId, paxId);
           Get.back();
@@ -1070,8 +1302,8 @@ class AdminController extends GetxController {
   ) {
     if (value == 'served') {
       AppDialog.confirmationMsg(
-        title: "Served Queue",
-        message: "Are you sure you want to update the status to 'Served'?",
+        title: "${'served'.tr} ${'queue'.tr}",
+        message: "sure_to_serve".tr,
         function: () async {
           Get.back();
           await servedQueueWithhold(queueId);
@@ -1080,8 +1312,8 @@ class AdminController extends GetxController {
       );
     } else if (value == 'void') {
       AppDialog.confirmationMsg(
-        title: "Void Queue",
-        message: "Are you sure you want to update the status to 'Void'?",
+        title: "${'void'.tr} ${'queue'.tr}",
+        message: "sure_to_void".tr,
         function: () async {
           Get.back();
           await voidQueueWithhold(queueId);
@@ -1134,10 +1366,39 @@ class AdminController extends GetxController {
     int hours = diff.inHours % 24;
     int minutes = diff.inMinutes % 60;
 
-    String daysStr = days > 0 ? '$days d ' : '';
-    String hoursStr = hours > 0 ? '$hours h ' : '';
-    String minutesStr = minutes > 0 ? '$minutes m' : '';
+    String daysStr = days > 0 ? '$days ${'d'} ' : '';
+    String hoursStr = hours > 0 ? '$hours ${'h'} ' : '';
+    String minutesStr = minutes > 0 ? '$minutes ${'m'} ' : '';
 
     return '$daysStr$hoursStr$minutesStr'.trim();
+  }
+
+  Future<void> launchUrlDoc() async {
+    if (!await launchUrl(_url)) {
+      throw Exception('Could not launch $_url');
+    }
+  }
+
+  void lang() async {
+    isEnglishApp.value = !isEnglishApp.value;
+    await storage.write(key: 'lang', value: isEnglishApp.value ? 'en' : 'id');
+    Get.updateLocale(Locale(isEnglishApp.value ? 'en' : 'id'));
+    String jsonDataList = jsonEncode(isEnglishApp.value ? 'en' : 'id');
+    for (var windowID in secondaryWindowIDs) {
+      DesktopMultiWindow.invokeMethod(windowID, "lang", jsonDataList);
+    }
+  }
+
+  void langPrinter() async {
+    isEnglishPrinter.value = !isEnglishPrinter.value;
+    await storage.write(
+        key: 'lang_print', value: isEnglishPrinter.value ? 'en' : 'id');
+  }
+
+  void download() async {
+    FileDownloader downloader = FileDownloader();
+    List<String?> id = getAllAdsid();
+    List<String?> ads = getAllAdsNumbers();
+    await downloader.downloadFiles(id, ads);
   }
 }
