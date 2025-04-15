@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pickup_queue_system/routes/app_pages.dart';
+import 'package:pickup_queue_system/screen/customer_screen.dart';
 import 'package:window_manager/window_manager.dart';
 
 Future<void> main(List<String> args) async {
@@ -16,7 +17,7 @@ Future<void> main(List<String> args) async {
       await windowManager.show();
     });
   } else {
-    runApp(const CustomerScreen());
+    runApp(const CustomerWindow());
     windowManager.waitUntilReadyToShow(const WindowOptions(fullScreen: true),
         () async {
       await windowManager.show();
@@ -39,22 +40,15 @@ class QueueApp extends StatelessWidget {
   }
 }
 
-class CustomerScreen extends StatelessWidget {
-  const CustomerScreen({super.key});
+class CustomerWindow extends StatelessWidget {
+  const CustomerWindow({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Customer Screen',
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Customer Screen'),
-        ),
-        body: const Center(
-          child: Text('This is the customer screen'),
-        ),
-      ),
+      home: CustomerScreen(),
     );
   }
 }
