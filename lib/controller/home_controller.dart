@@ -4,35 +4,45 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:desktop_window/desktop_window.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
-import 'package:pickup_queue_system/data/model/test_model.dart';
+import 'package:pickup_queue_system/data/Enum/queue_status.dart';
+import 'package:pickup_queue_system/data/Enum/shift_status.dart';
+import 'package:pickup_queue_system/data/database/database_helper.dart';
+import 'package:pickup_queue_system/data/model/outlet_model.dart';
+import 'package:pickup_queue_system/data/model/queue_model.dart';
+import 'package:pickup_queue_system/data/model/shift_model.dart';
 
 class HomeController extends GetxController {
-  var dataList = <DataModel>[].obs;
-  var filteredList = <DataModel>[].obs;
-  var selectedStatus = 'All'.obs;
+  var filteredList = <QueueModel>[].obs;
+  Rx<QueueStatus?> selectedStatus = Rx<QueueStatus?>(null);
   var searchQuery = ''.obs;
-  var isLoading = true.obs;
-
-  var queue = ''.obs;
-  var description = ''.obs;
-
-  var activeField = ''.obs; // "queue", "description", atau "search"
-
-  final List<String> statusOptions = [
-    'All',
-    'Pending',
-    'Processing',
-    'Completed',
-    'Rejected',
-    'On Hold',
-  ];
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
+  final Rx<Outlet?> outlet = Rx<Outlet?>(null);
+  final Rx<Shift?> shift = Rx<Shift?>(null);
+  final RxBool isLoading = false.obs;
+  var isShiftOpened = false.obs;
+  final RxList<QueueModel> queues = <QueueModel>[].obs;
+  var queueInput = ''.obs;
+  var descriptionInput = ''.obs;
+  final RxInt totalQueues = 0.obs;
+  final RxMap<QueueStatus, int> queueCounts = <QueueStatus, int>{
+    QueueStatus.waiting: 0,
+    QueueStatus.calling: 0,
+    QueueStatus.completed: 0,
+    QueueStatus.none: 0,
+  }.obs;
+  var activeField = ''.obs;
+  final List<QueueStatus> statusOptions = QueueStatus.values;
+  var totalFetchQueues = 0.obs;
+  var selectedPageNumber = 1.obs;
+  var totalData = 0.obs;
+  final int limitPerPage = 20;
 
   @override
-  void onInit() {
+  Future<void> onInit() async {
     super.onInit();
-    loadDummyData();
-    ever(selectedStatus, (_) => filterData());
-    ever(searchQuery, (_) => filterData());
+    await fetchOutlet();
+    await checkOpenedShift();
+    await fetchQueues();
   }
 
   void setActiveField(String field) {
@@ -42,10 +52,10 @@ class HomeController extends GetxController {
   void addCharacter(String char) {
     switch (activeField.value) {
       case 'queue':
-        queue.value += char;
+        queueInput.value += char;
         break;
       case 'description':
-        description.value += char;
+        descriptionInput.value += char;
         break;
       case 'search':
         searchQuery.value += char;
@@ -56,14 +66,15 @@ class HomeController extends GetxController {
   void backspace() {
     switch (activeField.value) {
       case 'queue':
-        if (queue.isNotEmpty) {
-          queue.value = queue.value.substring(0, queue.value.length - 1);
+        if (queueInput.isNotEmpty) {
+          queueInput.value =
+              queueInput.value.substring(0, queueInput.value.length - 1);
         }
         break;
       case 'description':
-        if (description.isNotEmpty) {
-          description.value =
-              description.value.substring(0, description.value.length - 1);
+        if (descriptionInput.isNotEmpty) {
+          descriptionInput.value = descriptionInput.value
+              .substring(0, descriptionInput.value.length - 1);
         }
         break;
       case 'search':
@@ -78,7 +89,7 @@ class HomeController extends GetxController {
   void done() {
     Get.snackbar(
       'Done',
-      'Queue: ${queue.value}, Description: ${description.value}, Search: ${searchQuery.value}',
+      'Queue: ${queueInput.value}, Description: ${descriptionInput.value}, Search: ${searchQuery.value}',
     );
     activeField.value = '';
   }
@@ -96,157 +107,170 @@ class HomeController extends GetxController {
     });
   }
 
-  void printSomething() {
-    Get.snackbar(
-      'Print',
-      'Queue: ${queue.value}, Description: ${description.value}, Search: ${searchQuery.value}',
-    );
-  }
-
-  void loadDummyData() {
-    dataList.assignAll([
-      DataModel(
-        id: 1,
-        title: 'B110',
-        description: 'GOJEK',
-        date: DateTime.now().subtract(const Duration(days: 2)),
-        status: 'Pending',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 2,
-        title: 'HD110',
-        description: 'SHOPEE FOOD',
-        date: DateTime.now().subtract(const Duration(days: 1)),
-        status: 'Processing',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 3,
-        title: 'C120',
-        description: 'GRAB',
-        date: DateTime.now(),
-        status: 'Completed',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 4,
-        title: 'C110',
-        description: 'GRAB',
-        date: DateTime.now().add(const Duration(days: 1)),
-        status: 'On Hold',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 5,
-        title: 'B120',
-        description: 'GOJEK',
-        date: DateTime.now().add(const Duration(days: 2)),
-        status: 'Rejected',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 5,
-        title: 'B120',
-        description: 'GOJEK',
-        date: DateTime.now().add(const Duration(days: 2)),
-        status: 'Rejected',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 5,
-        title: 'B120',
-        description: 'Maemunah',
-        date: DateTime.now().add(const Duration(days: 2)),
-        status: 'Rejected',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 5,
-        title: 'B120',
-        description: 'SHOPEE FOOD',
-        date: DateTime.now().add(const Duration(days: 2)),
-        status: 'Rejected',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 5,
-        title: 'B120',
-        description: 'GRAB',
-        date: DateTime.now().add(const Duration(days: 2)),
-        status: 'Rejected',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 5,
-        title: 'B120',
-        description: 'GRAB',
-        date: DateTime.now().add(const Duration(days: 2)),
-        status: 'Rejected',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 5,
-        title: 'B120',
-        description: '',
-        date: DateTime.now().add(const Duration(days: 2)),
-        status: 'Rejected',
-        keyInfo: '8',
-      ),
-      DataModel(
-        id: 5,
-        title: 'B120',
-        description: 'SHOPEE FOOD',
-        date: DateTime.now().add(const Duration(days: 2)),
-        status: 'Rejected',
-        keyInfo: '8',
-      ),
-    ]);
-
-    filterData();
-  }
-
-  void filterData() {
-    filteredList.assignAll(dataList.where((data) {
-      final matchesStatus =
-          selectedStatus.value == 'All' || data.status == selectedStatus.value;
-      final matchesSearch =
-          data.title.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
-              data.description
-                  .toLowerCase()
-                  .contains(searchQuery.value.toLowerCase());
-      return matchesStatus && matchesSearch;
-    }));
-  }
-
-  void updateStatus(int id, String newStatus) {
-    final index = dataList.indexWhere((item) => item.id == id);
-    if (index != -1) {
-      dataList[index] = dataList[index].copyWith(status: newStatus);
-      filterData();
+  Future<void> fetchOutlet() async {
+    try {
+      isLoading.value = true;
+      outlet.value = await _databaseHelper.getFirstOutlet();
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal memuat outlet pertama: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  void addNewData(DataModel newData) {
-    dataList.add(newData);
-    filterData();
-  }
-}
+  Future<void> checkOpenedShift() async {
+    isLoading.value = true;
+    try {
+      if (outlet.value == null) return;
 
-extension DataModelExtension on DataModel {
-  DataModel copyWith({
-    String? title,
-    String? description,
-    String? status,
-    String? keyInfo,
-  }) {
-    return DataModel(
-      id: id,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      date: date,
-      status: status ?? this.status,
-      keyInfo: keyInfo ?? this.keyInfo,
-    );
+      shift.value = await _databaseHelper.getActiveShift(outlet.value!.id!);
+      isShiftOpened.value = shift.value != null;
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal memeriksa shift: $e');
+    } finally {
+      isLoading.value = false;
+    }
   }
+
+  Future<void> createNewShift() async {
+    if (outlet.value == null) {
+      Get.snackbar('Error', 'Tidak ada outlet yang dipilih');
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      final newShift = Shift(
+        shiftDate: DateTime.now().toIso8601String(),
+        outletId: outlet.value!.id!,
+        status: ShiftStatus.opened.value,
+        createdAt: DateTime.now().toIso8601String(),
+        updatedAt: DateTime.now().toIso8601String(),
+      );
+
+      final id = await _databaseHelper.createShift(newShift);
+      shift.value = newShift.copyWith(id: id);
+      isShiftOpened.value = true;
+      Get.snackbar('Berhasil', 'Shift berhasil dibuka');
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal membuka shift: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Di dalam class HomeController
+  Future<void> closeCurrentShift() async {
+    if (shift.value == null) {
+      Get.snackbar('Error', 'Tidak ada shift yang aktif');
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      final db = await _databaseHelper.database;
+      await db.update(
+        'Shift',
+        {
+          'status': ShiftStatus.closed.value,
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [shift.value!.id],
+      );
+
+      shift.value = null;
+      queues.clear();
+      isShiftOpened.value = false;
+      Get.snackbar('Berhasil', 'Shift berhasil ditutup');
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal menutup shift: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> createNewQueue() async {
+    if (queueInput.value.isEmpty) {
+      Get.snackbar('Error', 'Nomor antrian harus diisi');
+      return;
+    }
+    // Validasi unik
+    final isUnique = await _databaseHelper.isQueueNumberUnique(
+      queueNumber: queueInput.value,
+      shiftId: shift.value!.id!,
+    );
+
+    if (!isUnique) {
+      Get.snackbar('Error', 'Nomor antrian sudah digunakan pada shift ini');
+      return;
+    }
+    isLoading.value = true;
+    try {
+      final newQueue = QueueModel(
+        queueNumber: queueInput.value,
+        description: descriptionInput.value,
+        status: QueueStatus.waiting.value,
+        shiftId: shift.value!.id!,
+        createdAt: DateTime.now().toIso8601String(),
+        updatedAt: DateTime.now().toIso8601String(),
+      );
+      await _databaseHelper.createQueue(newQueue);
+      await fetchQueues();
+      // Reset form
+      queueInput.value = '';
+      descriptionInput.value = '';
+
+      Get.snackbar('Berhasil', 'Antrian berhasil dibuat');
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal membuat antrian: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> fetchQueues({int pageNumber = 1}) async {
+    isLoading.value = true;
+    selectedPageNumber.value = pageNumber;
+
+    try {
+      final offset = (pageNumber - 1) * limitPerPage;
+
+      final result = await _databaseHelper.getQueuesByShift(
+        shift.value!.id!,
+        limit: limitPerPage,
+        offset: offset,
+        status: selectedStatus.value,
+        search: searchQuery.value,
+      );
+
+      queues.assignAll(result);
+
+      totalData.value = await _databaseHelper.getTotalQueues(shift.value!.id!);
+      totalFetchQueues.value = (totalData.value / limitPerPage).ceil();
+
+      await loadQueueStats();
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal memuat antrian: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> loadQueueStats() async {
+    isLoading.value = true;
+    try {
+      totalQueues.value =
+          await _databaseHelper.getTotalQueues(shift.value!.id!);
+      final counts =
+          await _databaseHelper.getQueueCountsByStatus(shift.value!.id!);
+      queueCounts.value = counts;
+    } catch (e) {
+      Get.snackbar('Error', 'Gagal memuat statistik antrian: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+
 }

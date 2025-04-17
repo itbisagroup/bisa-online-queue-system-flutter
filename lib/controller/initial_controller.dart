@@ -1,125 +1,78 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:pickup_queue_system/data/database/database_helper.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:pickup_queue_system/data/model/outlet_model.dart';
 import 'package:pickup_queue_system/routes/app_pages.dart';
 
 class InitialController extends GetxController {
   final DatabaseHelper _databaseHelper = DatabaseHelper();
-  final RxBool isLoading = false.obs;
-  final RxString errorMessage = ''.obs;
 
-  // Form fields
-  final RxString codeName = ''.obs;
   final RxString fullName = ''.obs;
+  final RxString logoPath = ''.obs;
+  final RxBool isLoading = false.obs;
+
+  // Other optional fields
+  final RxString codeName = ''.obs;
   final RxString address = ''.obs;
+  final RxString phoneNumber = ''.obs;
   final RxString subdistrict = ''.obs;
-  final RxString district = ''.obs;
   final RxString city = ''.obs;
   final RxString postalCode = ''.obs;
   final RxString province = ''.obs;
   final RxString country = ''.obs;
-  final RxString phoneNumber = ''.obs;
   final RxString faxNumber = ''.obs;
   final RxString emailAddress = ''.obs;
   final RxString description = ''.obs;
 
-  void updateField(String field, String value) {
-    switch (field) {
-      case 'codeName':
-        codeName(value);
-        break;
-      case 'fullName':
-        fullName(value);
-        break;
-      case 'address':
-        address(value);
-        break;
-      case 'subdistrict':
-        subdistrict(value);
-        break;
-      case 'district':
-        district(value);
-        break;
-      case 'city':
-        city(value);
-        break;
-      case 'postalCode':
-        postalCode(value);
-        break;
-      case 'province':
-        province(value);
-        break;
-      case 'country':
-        country(value);
-        break;
-      case 'phoneNumber':
-        phoneNumber(value);
-        break;
-      case 'faxNumber':
-        faxNumber(value);
-        break;
-      case 'emailAddress':
-        emailAddress(value);
-        break;
-      case 'description':
-        description(value);
-        break;
+  Future<void> pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      logoPath.value = image.path;
     }
   }
 
-  Future<void> createOutlet() async {
+  Future<bool> saveOutlet() async {
+    if (fullName.value.isEmpty || logoPath.value.isEmpty) {
+      Get.snackbar('Error', 'Full Name and Logo are required');
+      return false;
+    }
+
+    isLoading.value = true;
+
     try {
-      isLoading(true);
-      errorMessage('');
-
-      if (fullName.isEmpty) {
-        throw 'Full name is required';
-      }
-
       final outlet = Outlet(
-        codeName: codeName.value,
         fullName: fullName.value,
+        logo: logoPath.value,
+        codeName: codeName.value,
         address: address.value,
+        phoneNumber: phoneNumber.value,
         subdistrict: subdistrict.value,
-        district: district.value,
         city: city.value,
         postalCode: postalCode.value,
         province: province.value,
         country: country.value,
-        phoneNumber: phoneNumber.value,
         faxNumber: faxNumber.value,
         emailAddress: emailAddress.value,
         description: description.value,
+        createdAt: DateTime.now().toIso8601String(),
+        updatedAt: DateTime.now().toIso8601String(),
       );
 
-      await _databaseHelper.createOutlet(outlet);
-      Get.snackbar('Success', 'Outlet created successfully');
-      await const FlutterSecureStorage()
-          .write(key: 'outlet_id', value: outlet.id.toString());
+      final db = await _databaseHelper.database;
+      await db.insert('Outlet', outlet.toMap());
+      await const FlutterSecureStorage().write(
+        key: 'outlet',
+        value: faxNumber.value,
+      );
+      isLoading.value = false;
       Get.offAllNamed(Routes.home);
-      clearForm();
+      return true;
     } catch (e) {
-      errorMessage(e.toString());
-      Get.snackbar('Error', e.toString());
-    } finally {
-      isLoading(false);
+      isLoading.value = false;
+      Get.snackbar('Error', 'Failed to save outlet: $e');
+      return false;
     }
-  }
-
-  void clearForm() {
-    codeName('');
-    fullName('');
-    address('');
-    subdistrict('');
-    district('');
-    city('');
-    postalCode('');
-    province('');
-    country('');
-    phoneNumber('');
-    faxNumber('');
-    emailAddress('');
-    description('');
   }
 }

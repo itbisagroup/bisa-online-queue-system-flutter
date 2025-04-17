@@ -16,7 +16,7 @@ class Outletavaliable extends GetMiddleware {
 
     try {
       const storage = FlutterSecureStorage();
-      final outletName = await storage.read(key: 'outlet_id');
+      final outletName = await storage.read(key: 'outlet');
 
       if (outletName != null) {
         Get.offAllNamed(Routes.home);

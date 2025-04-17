@@ -47,6 +47,8 @@ dependencies:
   path: ^1.9.0
   awesome_dialog: ^3.2.1
   path_provider: ^2.1.5
+  image_picker: ^1.1.2
+  number_pagination: ^1.1.6
 
 
 

@@ -1,9 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pickup_queue_system/controller/initial_controller.dart';
-import 'package:pickup_queue_system/routes/app_pages.dart';
-import 'package:pickup_queue_system/utills/constans.dart';
-import 'package:pickup_queue_system/utills/widget/app_text.dart';
+
 
 class InitialScreen extends GetView<InitialController> {
   const InitialScreen({super.key});
@@ -12,124 +12,132 @@ class InitialScreen extends GetView<InitialController> {
   Widget build(BuildContext context) {
     Get.put(InitialController());
     return Scaffold(
-      body: Center(
-        child: Card(
-          elevation: 20,
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            color: AppColors.white,
-            height: 450,
-            width: 450,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Image.asset(
-                  'assets/images/logo.png',
-                  height: 150,
-                  width: 150,
-                ),
-                const AppText(
-                  text: 'BISA ONLINE QUEUE SYSTEM',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: AppColors.black,
-                ),
-                Form(
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: TextEditingController(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          letterSpacing: 1,
-                          wordSpacing: 1,
-                        ),
-                        decoration: const InputDecoration(
-                            hintText: 'exm: https://example.com',
-                            hintStyle: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1,
-                              wordSpacing: 1,
-                              fontStyle: FontStyle.italic,
-                            ),
-                            border: OutlineInputBorder(),
-                            labelStyle: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1,
-                              wordSpacing: 1,
-                            ),
-                            labelText: 'Server API'),
-                        validator: (val) {
-                          if (val!.trim().isEmpty) {
-                            return "🔴 ${'input_url'.tr}";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(
-                        height: 10,
-                      ),
-                      TextFormField(
-                        controller: TextEditingController(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          letterSpacing: 1,
-                          wordSpacing: 1,
-                        ),
-                        decoration: const InputDecoration(
-                            hintText: 'exm: sxxx:xxxxxxxxxx',
-                            hintStyle: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1,
-                              wordSpacing: 1,
-                              fontStyle: FontStyle.italic,
-                            ),
-                            border: OutlineInputBorder(),
-                            labelStyle: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1,
-                              wordSpacing: 1,
-                            ),
-                            labelText: 'License Key'),
-                        validator: (val) {
-                          if (val!.trim().isEmpty) {
-                            return "🔴 ${'input_key'.tr}";
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: 40,
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Get.offAllNamed(Routes.home);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.maroon,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                    ),
-                    child: const AppText(
-                        text: 'Submit',
-                        color: AppColors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
+      appBar: AppBar(
+        title: const Text('Add New Outlet'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Obx(() => _buildLogoField()),
+            const SizedBox(height: 20),
+            _buildFullNameField(),
+            const SizedBox(height: 20),
+            _buildCodeNameField(),
+            const SizedBox(height: 20),
+            _buildAddressField(),
+            const SizedBox(height: 20),
+            _buildPhoneNumberField(),
+            const SizedBox(height: 30),
+            Obx(() => _buildSubmitButton()),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLogoField() {
+    return Column(
+      children: [
+        if (controller.logoPath.value.isNotEmpty)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(
+              File(controller.logoPath.value),
+              width: 150,
+              height: 150,
+              fit: BoxFit.cover,
+            ),
+          )
+        else
+          Container(
+            width: 150,
+            height: 150,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.image, size: 50, color: Colors.grey),
+          ),
+        const SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: controller.pickImage,
+          child: const Text('Select Logo'),
+        ),
+        if (controller.logoPath.value.isEmpty)
+          const Text(
+            'Logo is required',
+            style: TextStyle(color: Colors.red),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildFullNameField() {
+    return TextFormField(
+      decoration: const InputDecoration(
+        labelText: 'Full Name*',
+        border: OutlineInputBorder(),
+      ),
+      onChanged: controller.fullName,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter full name';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildCodeNameField() {
+    return TextFormField(
+      decoration: const InputDecoration(
+        labelText: 'Code Name',
+        border: OutlineInputBorder(),
+      ),
+      onChanged: controller.codeName,
+    );
+  }
+
+  Widget _buildAddressField() {
+    return TextFormField(
+      decoration: const InputDecoration(
+        labelText: 'Address',
+        border: OutlineInputBorder(),
+      ),
+      maxLines: 3,
+      onChanged: controller.address,
+    );
+  }
+
+  Widget _buildPhoneNumberField() {
+    return TextFormField(
+      decoration: const InputDecoration(
+        labelText: 'Phone Number',
+        border: OutlineInputBorder(),
+      ),
+      keyboardType: TextInputType.phone,
+      onChanged: controller.phoneNumber,
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        onPressed: controller.isLoading.value ? null : () async {
+          final success = await controller.saveOutlet();
+          if (success) {
+            Get.back();
+            Get.snackbar('Success', 'Outlet saved successfully');
+          }
+        },
+        child: controller.isLoading.value
+            ? const CircularProgressIndicator()
+            : const Text('Save Outlet'),
       ),
     );
   }

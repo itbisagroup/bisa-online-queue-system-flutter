@@ -1,3 +1,4 @@
+import 'package:pickup_queue_system/data/Enum/queue_status.dart';
 import 'package:pickup_queue_system/data/Enum/shift_status.dart';
 import 'package:pickup_queue_system/data/model/outlet_model.dart';
 import 'package:pickup_queue_system/data/model/queue_model.dart';
@@ -43,6 +44,7 @@ class DatabaseHelper {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code_name TEXT,
       full_name TEXT NOT NULL,
+      logo TEXT,
       address TEXT,
       subdistrict TEXT,
       district TEXT,
@@ -77,6 +79,7 @@ class DatabaseHelper {
     CREATE TABLE Queue (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       queue_number TEXT NOT NULL,
+      description TEXT,
       latest_call TEXT,
       call_count INTEGER DEFAULT 0,
       status INTEGER DEFAULT 1,
@@ -84,6 +87,7 @@ class DatabaseHelper {
       createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (shift_id) REFERENCES Shift(id) ON DELETE CASCADE
+      UNIQUE(queue_number, shift_id) ON CONFLICT FAIL
     )
   ''');
 
@@ -92,7 +96,7 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_queue_shift ON Queue(shift_id)');
   }
 
-  // Outlet Operations
+// services/database_helper.dart
   Future<Outlet?> getFirstOutlet() async {
     final db = await database;
     final maps = await db.query('Outlet', limit: 1);
@@ -100,91 +104,121 @@ class DatabaseHelper {
     return Outlet.fromMap(maps.first);
   }
 
-  Future<int> createOutlet(Outlet outlet) async {
+  Future<Shift?> getActiveShift(int outletId) async {
     final db = await database;
-    return await db.insert('Outlet', outlet.toMap());
-  }
-
-  Future<int> updateOutlet(Outlet outlet) async {
-    final db = await database;
-    return await db.update(
-      'Outlet',
-      outlet.toMap(),
-      where: 'id = ?',
-      whereArgs: [outlet.id],
-    );
+    try {
+      final maps = await db.query(
+        'Shift',
+        where: 'outlet_id = ? AND status = ?',
+        whereArgs: [outletId, ShiftStatus.opened.value],
+        limit: 1,
+      );
+      if (maps.isEmpty) return null;
+      return Shift.fromMap(maps.first);
+    } catch (e) {
+      print('Error getting active shift: $e');
+      return null;
+    }
   }
 
   Future<int> createShift(Shift shift) async {
     final db = await database;
-    return await db.insert('Shift', shift.toMap());
+    try {
+      return await db.insert('Shift', shift.toMap());
+    } catch (e) {
+      print('Error creating shift: $e');
+      rethrow;
+    }
   }
 
-  Future<Shift?> getFirstOpenedShift() async {
+  Future<bool> isQueueNumberUnique(
+      {required String queueNumber, required int shiftId}) async {
     final db = await database;
-    final maps = await db.query(
-      'Shift',
-      where: 'status = ?',
-      whereArgs: [ShiftStatus.opened.value],
-      orderBy: 'shift_date ASC',
+    final result = await db.query(
+      'Queue',
+      where: 'queue_number = ? AND shift_id = ?',
+      whereArgs: [queueNumber, shiftId],
       limit: 1,
     );
-    if (maps.isEmpty) return null;
-    return Shift.fromMap(maps.first);
-  }
-
-  Future<List<Shift>> getAllShifts() async {
-    final db = await database;
-    final maps = await db.query('Shift', orderBy: 'shift_date DESC');
-    return maps.map((e) => Shift.fromMap(e)).toList();
-  }
-
-  Future<List<QueueModel>> getQueuesByShift(int shiftId) async {
-    final db = await database;
-    final maps = await db.query(
-      'Queue',
-      where: 'shift_id = ?',
-      whereArgs: [shiftId],
-      orderBy: 'id ASC',
-    );
-
-    return maps.map((e) => QueueModel.fromMap(e)).toList();
+    return result.isEmpty;
   }
 
   Future<int> createQueue(QueueModel queue) async {
     final db = await database;
-    return await db.insert('Queue', queue.toMap());
+    try {
+      return await db.insert('Queue', queue.toMap());
+    } catch (e) {
+      print('Error creating queue: $e');
+      rethrow;
+    }
   }
 
-  Future<int> updateQueue(QueueModel queue) async {
+  Future<List<QueueModel>> getQueuesByShift(
+    int shiftId, {
+    int? limit,
+    int? offset,
+    QueueStatus? status,
+    String? search,
+  }) async {
     final db = await database;
-    return await db.update(
-      'Queue',
-      queue.toMap(),
-      where: 'id = ?',
-      whereArgs: [queue.id],
-    );
-  }
 
-  Future<int> updateShift(Shift shift) async {
-    final db = await database;
-    return await db.update(
-      'Shift',
-      shift.toMap(),
-      where: 'id = ?',
-      whereArgs: [shift.id],
-    );
-  }
+    final whereConditions = <String>['shift_id = ?'];
+    final whereArgs = <dynamic>[shiftId];
 
-  Future<List<QueueModel>> getQueuesByShiftId(int shiftId) async {
-    final db = await database;
+    if (status != null) {
+      whereConditions.add('status = ?');
+      whereArgs.add(status.value);
+    }
+
+    if (search != null && search.isNotEmpty) {
+      whereConditions.add('queue_number LIKE ?');
+      whereArgs.add('%$search%');
+    }
+
     final maps = await db.query(
       'Queue',
-      where: 'shift_id = ?',
-      whereArgs: [shiftId],
-      orderBy: 'createdAt ASC',
+      where: whereConditions.join(' AND '),
+      whereArgs: whereArgs,
+      orderBy: 'createdAt DESC',
+      limit: limit,
+      offset: offset,
     );
-    return maps.map((e) => QueueModel.fromMap(e)).toList();
+
+    return maps.map((map) => QueueModel.fromMap(map)).toList();
   }
-  
+
+  // Mendapatkan total antrian per shift
+  Future<int> getTotalQueues(int shiftId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as total FROM Queue WHERE shift_id = ?',
+      [shiftId],
+    );
+    return result.first['total'] as int;
+  }
+
+  // Mendapatkan jumlah antrian per status pada shift tertentu
+  Future<Map<QueueStatus, int>> getQueueCountsByStatus(int shiftId) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT status, COUNT(*) as count 
+      FROM Queue 
+      WHERE shift_id = ? 
+      GROUP BY status
+    ''', [shiftId]);
+
+    final counts = <QueueStatus, int>{
+      QueueStatus.waiting: 0,
+      QueueStatus.calling: 0,
+      QueueStatus.completed: 0,
+      QueueStatus.none: 0,
+    };
+
+    for (final row in result) {
+      final status = QueueStatus.fromValue(row['status'] as int);
+      counts[status] = row['count'] as int;
+    }
+
+    return counts;
+  }
 }

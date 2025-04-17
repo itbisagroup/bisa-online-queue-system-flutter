@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pickup_queue_system/controller/shift_controller.dart';
 import 'package:pickup_queue_system/data/Enum/shift_status.dart';
-import 'package:pickup_queue_system/data/database/database_helper.dart';
+
 
 class ShiftScreen extends GetView<ShiftController> {
   const ShiftScreen({super.key});
@@ -29,16 +29,7 @@ class ShiftScreen extends GetView<ShiftController> {
                       activeShift == null ? Colors.green : Colors.red,
                 ),
                 onPressed: () async {
-                  if (activeShift == null) {
-                    final outlet = await DatabaseHelper().getFirstOutlet();
-                    if (outlet != null) {
-                      await controller.createNewShift(outlet.id!);
-                    } else {
-                      Get.snackbar("Error", "Outlet belum tersedia.");
-                    }
-                  } else {
-                    await controller.closeActiveShift();
-                  }
+                 
                 },
               ),
             );
@@ -57,7 +48,7 @@ class ShiftScreen extends GetView<ShiftController> {
                   final shift = controller.shiftList[index];
                   return ListTile(
                     title: Text("Tanggal: ${shift.shiftDate}"),
-                    trailing: Text("Status: ${shift.status.label}"),
+                    // trailing: Text("Status: ${shift.status.label}"),
                     leading: const Icon(Icons.date_range),
                   );
                 },

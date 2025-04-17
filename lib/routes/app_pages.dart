@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:pickup_queue_system/routes/middleware/outlet_avaliable.dart';
+import 'package:pickup_queue_system/routes/middleware/outlet_not_avaliable.dart';
 
 
 import 'package:pickup_queue_system/screen/home_screen.dart';
@@ -16,14 +17,14 @@ class AppPages {
   static final routes = [
     GetPage(
       name: Routes.home,
-      page: () =>  HomeScreen(),
-      // middlewares: [OutletNotAvaliable()],
+      page: () =>  const HomeScreen(),
+      middlewares: [OutletNotAvaliable()],
       transition: Transition.noTransition,
     ),
     GetPage(
       name: Routes.shift,
       page: () => const ShiftScreen(),
-      // middlewares: [OutletNotAvaliable()],
+      middlewares: [OutletNotAvaliable()],
       transition: Transition.noTransition,
     ),
     GetPage(

@@ -1,3 +1,4 @@
+// data/Enum/shift_status.dart
 enum ShiftStatus {
   opened(0, 'Dibuka'),
   closed(1, 'Ditutup');
@@ -8,21 +9,6 @@ enum ShiftStatus {
   const ShiftStatus(this.value, this.description);
 
   static ShiftStatus fromValue(int value) {
-    return values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => ShiftStatus.opened,
-    );
+    return values.firstWhere((e) => e.value == value);
   }
-
-  static List<Map<String, dynamic>> get options => values
-      .map((e) => {
-            'value': e.value,
-            'label': e.description,
-          })
-      .toList();
-
-  String get label => description;
-
-  @override
-  String toString() => 'ShiftStatus.$name';
 }

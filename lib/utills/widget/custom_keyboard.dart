@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:pickup_queue_system/utills/constans.dart';
+import 'package:pickup_queue_system/utills/widget/app_text.dart';
 
 class CustomKeyboard extends StatelessWidget {
   final void Function(String) onTextInput;
   final VoidCallback onBackspace;
   final VoidCallback onDone;
+  final bool visibleSpace;
 
   CustomKeyboard(
       {super.key,
       required this.onTextInput,
       required this.onBackspace,
+      this.visibleSpace = true,
       required this.onDone});
 
   final List<String> _numbers = [
+    '0',
     '1',
     '2',
     '3',
@@ -21,7 +26,6 @@ class CustomKeyboard extends StatelessWidget {
     '7',
     '8',
     '9',
-    '0',
   ];
   final List<String> _letters = [
     'A',
@@ -78,7 +82,7 @@ class CustomKeyboard extends StatelessWidget {
                 number,
                 backgroundColor: Colors.blueGrey[50],
                 textColor: Colors.blueGrey[800],
-                fontSize: 20,
+                fontSize: 40,
               );
             }).toList(),
           ),
@@ -94,7 +98,7 @@ class CustomKeyboard extends StatelessWidget {
                 letter,
                 backgroundColor: Colors.white,
                 textColor: Colors.blueGrey[800],
-                fontSize: 18,
+                fontSize: 40,
               );
             }).toList(),
           ),
@@ -111,6 +115,16 @@ class CustomKeyboard extends StatelessWidget {
                 backgroundColor: Colors.red[400],
                 onTap: onBackspace,
                 width: 100,
+              ),
+              Visibility(
+                visible: visibleSpace,
+                child: _buildKey(
+                  '                       ',
+                  backgroundColor: AppColors.grey,
+                  fontSize: 40,
+                  width: 100,
+                  onTap: () => onTextInput(' '), // Tambahkan ini
+                ),
               ),
               _buildKey(
                 'Done',
@@ -143,8 +157,8 @@ class CustomKeyboard extends StatelessWidget {
         splashColor: Colors.blueGrey.withOpacity(0.2),
         highlightColor: Colors.blueGrey.withOpacity(0.1),
         child: Ink(
-          width: width ?? 28,
-          height: 35,
+          width: width ?? 40,
+          height: 60,
           decoration: BoxDecoration(
             color: backgroundColor ?? Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -158,14 +172,12 @@ class CustomKeyboard extends StatelessWidget {
           ),
           child: Center(
             child: icon != null
-                ? Icon(icon, color: Colors.white, size: 16)
-                : Text(
-                    text,
-                    style: TextStyle(
-                      color: textColor ?? Colors.blueGrey[800],
-                      fontSize: fontSize ?? 12,
-                      fontWeight: FontWeight.w500,
-                    ),
+                ? Icon(icon, color: Colors.white, size: 24)
+                : AppText(
+                    text: text,
+                    color: textColor ?? Colors.black,
+                    fontSize: fontSize ?? 16,
+                    fontWeight: FontWeight.w500,
                   ),
           ),
         ),
