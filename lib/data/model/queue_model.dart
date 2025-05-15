@@ -6,6 +6,7 @@ class QueueModel {
   final int callCount;
   final int status;
   final int shiftId;
+  final int isSynch;
   final String createdAt;
   final String updatedAt;
 
@@ -17,6 +18,7 @@ class QueueModel {
     this.callCount = 0,
     required this.status,
     required this.shiftId,
+    required this.isSynch,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -30,6 +32,7 @@ class QueueModel {
     int? callCount,
     int? status,
     int? shiftId,
+    int? isSynch,
     String? createdAt,
     String? updatedAt,
   }) {
@@ -41,6 +44,7 @@ class QueueModel {
       callCount: callCount ?? this.callCount,
       status: status ?? this.status,
       shiftId: shiftId ?? this.shiftId,
+      isSynch: isSynch ?? this.isSynch,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -55,6 +59,7 @@ class QueueModel {
       callCount: map['call_count'],
       status: map['status'],
       shiftId: map['shift_id'],
+      isSynch: map['is_synch'] ?? 0,
       createdAt: map['createdAt'],
       updatedAt: map['updatedAt'],
     );

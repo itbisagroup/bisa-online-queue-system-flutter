@@ -13,7 +13,7 @@ Future<void> main(List<String> args) async {
   if (!isSubWindow) {
     runApp(const QueueApp());
     windowManager.waitUntilReadyToShow(const WindowOptions(), () async {
-      await windowManager.setTitle("BISA Online Queue System");
+      await windowManager.setTitle("BISA Pickup Queue System");
       await windowManager.show();
     });
   } else {

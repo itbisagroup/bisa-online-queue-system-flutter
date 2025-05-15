@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:number_pagination/number_pagination.dart';
 import 'package:pickup_queue_system/controller/home_controller.dart';
 import 'package:pickup_queue_system/data/Enum/queue_status.dart';
 import 'package:pickup_queue_system/data/model/queue_model.dart';
+import 'package:pickup_queue_system/routes/app_pages.dart';
 import 'package:pickup_queue_system/utills/constans.dart';
 import 'package:pickup_queue_system/utills/time_ago_helper.dart';
 import 'package:pickup_queue_system/utills/widget/app_text.dart';
@@ -80,11 +82,13 @@ class HomeScreen extends GetView<HomeController> {
       leading: Obx(
         () => controller.isLoading.value
             ? const CircularProgressIndicator()
-            : Image.file(
-                File(controller.outlet.value!.logo),
-                width: 50,
-                height: 50,
-                fit: BoxFit.cover,
+            : Padding(
+                padding: const EdgeInsets.only(left: 15),
+                child: Image.file(
+                  File(controller.outlet.value!.logo),
+                  width: 250,
+                  fit: BoxFit.contain,
+                ),
               ),
       ),
       title: Column(
@@ -94,7 +98,7 @@ class HomeScreen extends GetView<HomeController> {
           Obx(
             () => AppText(
               text: controller.isLoading.value
-                  ? '.....'
+                  ? ''
                   : controller.outlet.value!.fullName,
               fontWeight: FontWeight.bold,
               fontSize: 32,
@@ -102,11 +106,15 @@ class HomeScreen extends GetView<HomeController> {
             ),
           ),
           const SizedBox(height: 2),
-          const AppText(
-            text: 'Shift : 24/01/2024 08:00 - ',
-            fontWeight: FontWeight.normal,
-            fontSize: 18,
-            color: AppColors.blackCalm,
+          Obx(
+            () => AppText(
+              text: controller.isLoading.value || controller.shift.value == null
+                  ? ''
+                  : 'Shift : ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(controller.shift.value!.shiftDate).toLocal())}',
+              fontWeight: FontWeight.normal,
+              fontSize: 18,
+              color: AppColors.blackCalm,
+            ),
           ),
         ],
       ),
@@ -114,8 +122,9 @@ class HomeScreen extends GetView<HomeController> {
         const SizedBox(width: 8),
         Obx(
           () => Visibility(
-            visible:
-                controller.isShiftOpened.value && !controller.isLoading.value,
+            visible: controller.isShiftOpened.value &&
+                !controller.isLoading.value &&
+                !controller.isCustomerScreenActive.value,
             child: ElevatedButton.icon(
               onPressed: () {
                 controller.openCustomerWindow();
@@ -160,9 +169,67 @@ class HomeScreen extends GetView<HomeController> {
           ),
         ),
         const SizedBox(width: 30),
-        IconButton(
-          onPressed: () {},
+        PopupMenuButton(
           icon: const Icon(Icons.settings, size: 30, color: AppColors.black),
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'config',
+              child: Row(
+                children: [
+                  Icon(Icons.settings_applications_rounded),
+                  Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: AppText(
+                      text: 'Konfigurasi',
+                      fontWeight: FontWeight.normal,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'printer',
+              child: Row(
+                children: [
+                  Icon(Icons.print),
+                  Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: AppText(
+                      text: 'Printer',
+                      fontWeight: FontWeight.normal,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'shift',
+              child: Row(
+                children: [
+                  Icon(Icons.access_time),
+                  Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: AppText(
+                      text: 'Shift',
+                      fontWeight: FontWeight.normal,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          onSelected: (value) {
+            if (value == 'config') {
+              Get.toNamed(Routes.config);
+            } else if (value == 'shift') {
+              Get.toNamed(Routes.shift);
+            } else if (value == 'printer') {
+              Get.toNamed(Routes.printer);
+            }
+          },
         ),
         const SizedBox(width: 16),
       ],
@@ -176,7 +243,7 @@ class HomeScreen extends GetView<HomeController> {
       child: Align(
         alignment: Alignment.topCenter,
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(10.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,7 +255,7 @@ class HomeScreen extends GetView<HomeController> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const AppText(
+                       const AppText(
                         text: 'Buat Antrean',
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -210,9 +277,11 @@ class HomeScreen extends GetView<HomeController> {
                         value: controller.descriptionInput.value,
                         minLines: 3,
                         maxLines: 4,
-                        onTap: () => _showKeyboard(context, 'queue', true, () {
+                        onTap: () =>
+                            _showKeyboard(context, 'description', true, () {
                           Navigator.pop(context);
                         }),
+                        showHelperNotes: true, // Show helper notes
                       ),
                       const SizedBox(height: 24),
                       _buildCreateQueueButton(),
@@ -261,6 +330,21 @@ class HomeScreen extends GetView<HomeController> {
                           ],
                         ),
                         _buildStatusStats(),
+                        const SizedBox(height: 16),
+                         Row(
+                           children: [
+                             const AppText(
+                              text: 'Status Sinkronisasi : ',
+                              fontSize: 8,
+                                               
+                                                     ),
+                             AppText(
+                              text: controller.syncStatus.value,
+                              fontSize: 8,
+                                               
+                                                     ),
+                           ],
+                         ),
                       ],
                     ),
                   ),
@@ -315,14 +399,17 @@ class HomeScreen extends GetView<HomeController> {
   Widget _buildQueueListPanel(BuildContext context) {
     return Expanded(
       flex: 4,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 20, left: 20, right: 20),
-        child: Column(
-          children: [
-            _buildFilterRow(),
-            const SizedBox(height: 16),
-            _buildQueueListView(),
-          ],
+      child: Visibility(
+        visible: controller.totalQueues.value > 0,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 20, left: 20, right: 20),
+          child: Column(
+            children: [
+              _buildFilterRow(),
+              const SizedBox(height: 16),
+              _buildQueueListView(),
+            ],
+          ),
         ),
       ),
     );
@@ -456,7 +543,7 @@ class HomeScreen extends GetView<HomeController> {
               const SizedBox(width: 8),
               AppText(
                   text: data.queueNumber,
-                  fontSize: 24,
+                  fontSize: 32,
                   fontWeight: FontWeight.bold),
               const SizedBox(width: 12),
               _buildStatusBadge(data.status),
@@ -505,62 +592,212 @@ class HomeScreen extends GetView<HomeController> {
   }
 
   Widget _buildQueueActionSection(QueueModel data) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 16),
-            _buildCallButton(),
-            const SizedBox(height: 12),
-            _chengeStatusButton(),
-          ],
+    return Visibility(
+      visible: data.status == QueueStatus.waiting.value ||
+          data.status == QueueStatus.calling.value,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 16),
+              _buildCallButton(data),
+              const SizedBox(height: 12),
+              _chengeStatusButton(data),
+            ],
+          ),
+          _buildQueueOptionsMenu(data),
+        ],
+      ),
+    );
+  }
+
+  void showEditQueueDialog(QueueModel queue) {
+    controller.queueUpdateController.text = queue.queueNumber;
+    controller.descriptionUpdateController.text = queue.description ?? '';
+
+    final formKey = GlobalKey<FormState>();
+    String? errorMessage;
+
+    Get.dialog(
+      StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Edit Antrian'),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        errorMessage!,
+                        style: TextStyle(
+                          color: Colors.red[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  TextFormField(
+                    controller: controller.queueUpdateController,
+                    readOnly: true,
+                    onTap: () =>
+                        _showKeyboard(Get.context!, 'queueUpdate', false, () {
+                      Navigator.pop(Get.context!);
+                    }),
+                    decoration: const InputDecoration(
+                      labelText: 'Nomor Antrian',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Nomor antrian harus diisi';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    readOnly: true,
+                    onTap: () =>
+                        _showKeyboard(context, 'descriptionUpdate', true, () {
+                      Navigator.pop(context);
+                    }),
+                    controller: controller.descriptionUpdateController,
+                    decoration: const InputDecoration(
+                      labelText: 'Deskripsi (Opsional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  if (formKey.currentState!.validate()) {
+                    try {
+                      setState(() => errorMessage = null);
+                      await controller.updateQueueDetails(
+                        queueId: queue.id!,
+                        newQueueNumber:
+                            controller.queueUpdateController.text.trim(),
+                        newDescription:
+                            controller.descriptionUpdateController.text.trim(),
+                      );
+                      Get.back();
+                    } catch (e) {
+                      setState(
+                          () => errorMessage = 'Gagal memperbarui antrian: $e');
+                    }
+                  }
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCallButton(QueueModel data) {
+    return Obx(() {
+      final isCalling = controller.callingQueueIds.contains(data.id);
+
+      return ElevatedButton.icon(
+        icon: isCalling
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.volume_up, size: 20, color: AppColors.white),
+        label: AppText(
+          text: isCalling ? 'Memanggil...' : 'Panggil',
+          fontSize: 16,
+          fontWeight: FontWeight.normal,
+          color: AppColors.white,
         ),
-        _buildQueueOptionsMenu(),
-      ],
-    );
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.maroon,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        onPressed: isCalling
+            ? null
+            : () async {
+                controller.callingQueueIds.add(data.id!);
+                await controller.callQueue(
+                    queueId: data.id!, queueNumber: data.queueNumber);
+                await Future.delayed(const Duration(seconds: 30));
+                controller.callingQueueIds.remove(data.id);
+              },
+      );
+    });
   }
 
-  Widget _buildCallButton() {
-    return ElevatedButton.icon(
-      icon: const Icon(Icons.volume_up, size: 20, color: AppColors.white),
-      label: const AppText(
-        text: 'Panggil',
-        fontSize: 16,
-        fontWeight: FontWeight.normal,
-        color: AppColors.white,
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.maroon,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      onPressed: () {},
-    );
-  }
-
-  Widget _chengeStatusButton() {
+  Widget _chengeStatusButton(QueueModel data) {
     return PopupMenuButton<String>(
-      onSelected: (value) {
-        if (value == 'served') {
-          // TODO: Handle served status
-          print("Status changed to: Served");
-        } else if (value == 'unknown') {
-          // TODO: Handle unknown status
-          print("Status changed to: Unknown");
-        }
+      onSelected: (value) async {
+        final newStatus = switch (value) {
+          'served' => QueueStatus.completed,
+          'unknown' => QueueStatus.none,
+          _ => QueueStatus.none,
+        };
+
+        await controller.changeQueueStatus(
+          queueId: data.id!,
+          newStatus: newStatus,
+        );
       },
       itemBuilder: (context) => [
         const PopupMenuItem(
           value: 'served',
-          child: Text('Served'),
+          child: Row(
+            children: [
+              Icon(Icons.check_circle, color: AppColors.confirm, size: 20),
+              SizedBox(width: 12),
+              AppText(
+                text: 'Selesai',
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: AppColors.confirm,
+              ),
+            ],
+          ),
         ),
         const PopupMenuItem(
           value: 'unknown',
-          child: Text('Unknown'),
+          child: Row(
+            children: [
+              Icon(Icons.help_outline, color: AppColors.red, size: 20),
+              SizedBox(width: 12),
+              AppText(
+                text: 'Tidak Diketahui',
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: AppColors.red,
+              ),
+            ],
+          ),
         ),
       ],
       child: Container(
@@ -587,13 +824,9 @@ class HomeScreen extends GetView<HomeController> {
     );
   }
 
-  Widget _buildQueueOptionsMenu() {
+  Widget _buildQueueOptionsMenu(QueueModel data) {
     return PopupMenuButton(
       itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'reprint',
-          child: AppText(text: 'Reprint', fontSize: 16),
-        ),
         const PopupMenuItem(
           value: 'edit',
           child: AppText(text: 'Edit', fontSize: 16),
@@ -601,9 +834,7 @@ class HomeScreen extends GetView<HomeController> {
       ],
       onSelected: (value) {
         if (value == 'edit') {
-          // Handle edit action
-        } else if (value == 'delete') {
-          // Handle delete action
+          showEditQueueDialog(data);
         }
       },
     );
@@ -671,25 +902,106 @@ class HomeScreen extends GetView<HomeController> {
     required VoidCallback onTap,
     int minLines = 1,
     int maxLines = 1,
+    bool showHelperNotes = false,
   }) {
-    return TextField(
-      readOnly: true,
-      minLines: minLines,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 18,
-          letterSpacing: 1,
-          wordSpacing: 1,
-          color: AppColors.blackCalm,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          readOnly: true,
+          minLines: minLines,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              letterSpacing: 1,
+              wordSpacing: 1,
+              color: AppColors.blackCalm,
+            ),
+            alignLabelWithHint: maxLines > 1,
+            border: const OutlineInputBorder(),
+// Hapus suffixIcon
+          ),
+          controller: TextEditingController(text: value),
+          onTap: onTap,
         ),
-        alignLabelWithHint: maxLines > 1,
-        border: const OutlineInputBorder(),
+        if (showHelperNotes)
+          Obx(() => Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    ...controller.helperNotes.map(
+                      (note) => InkWell(
+                        onTap: () {
+                          controller.selectedNote.value = note.name;
+                          controller.descriptionInput.value = note.name;
+                        },
+                        child: Chip(
+                          label: Text(note.name),
+                          onDeleted: () => controller.deleteNote(note.id!),
+                          deleteIcon: const Icon(Icons.close, size: 18),
+                          backgroundColor: controller.selectedNote.value ==
+                                  note.name
+                              ? Theme.of(context).primaryColor.withOpacity(0.2)
+                              : null,
+                        ),
+                      ),
+                    ),
+                    ActionChip(
+                      label: const Text('Pilihan Lain'),
+                      avatar: const Icon(Icons.add, size: 20),
+                      onPressed: () => _showAddNoteDialog(context),
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .secondary
+                          .withOpacity(0.2),
+                    ),
+                  ],
+                ),
+              )),
+      ],
+    );
+  }
+
+  void _showAddNoteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tambah Otomatis Catatan'),
+        content: TextField(
+          controller: controller.newHelpperNoteController,
+          onTap: () => _showKeyboard(context, 'newHelpperNote', true, () {
+            Navigator.pop(context);
+          }),
+          decoration: const InputDecoration(
+            labelText: 'Note',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.newHelpperNoteController.text.isNotEmpty) {
+                controller.addNewNote(
+                  controller.newHelpperNoteController.text.trim(),
+                );
+                controller.newHelpperNoteController.clear();
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
       ),
-      controller: TextEditingController(text: value),
-      onTap: onTap,
     );
   }
 }

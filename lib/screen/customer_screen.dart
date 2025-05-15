@@ -1,7 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pickup_queue_system/utills/constans.dart';
 import 'package:pickup_queue_system/utills/widget/app_text.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:widget_and_text_animator/widget_and_text_animator.dart';
+import 'dart:async';
 
 class CustomerScreen extends StatefulWidget {
   const CustomerScreen({super.key});
@@ -11,25 +18,117 @@ class CustomerScreen extends StatefulWidget {
 }
 
 class _CustomerScreenState extends State<CustomerScreen> with WindowListener {
+  bool isLoading = true;
+  late Timer _timer;
+  String currentDate = '';
+  String currentTime = '';
   // Sample queue data
-  final List<Map<String, dynamic>> preparingQueue = [
+  final List<Map<String, dynamic>> preparingQueue = [];
+  final List<Map<String, dynamic>> readyQueue = [];
+  String currentQueue = '-';
+  String outletName = '';
+  String outletLogo = '';
 
-  ];
-// test:01963865-53cf-70fe-b41a-5aa58a333efb http://bisa-queue-rest-ci4-v452.192.168.1.54.nip.io/api/client/v1/
-  final List<Map<String, dynamic>> readyQueue = [
-    {'number': 'A097', 'time': '10:15 AM'},
-    {'number': 'A098', 'time': '10:18 AM'},
-    {'number': 'A099', 'time': '10:20 AM'},
-    {'number': 'A099', 'time': '10:20 AM'},
-    {'number': 'A099', 'time': '10:20 AM'},
-    {'number': 'A099', 'time': '10:20 AM'},
-    {'number': 'A099', 'time': '10:20 AM'},
-    {'number': 'A099', 'time': '10:20 AM'},
-    {'number': 'A099', 'time': '10:20 AM'},
-    {'number': 'A099', 'time': '10:20 AM'},
-    {'number': 'A099', 'time': '10:20 AM'},
-    {'number': 'A100', 'time': '10:21 AM'},
-  ];
+  void _updateDateTime() {
+    final now = DateTime.now();
+
+    const days = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu'
+    ];
+    const months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
+    ];
+
+    final dayName = days[now.weekday - 1];
+    final monthName = months[now.month - 1];
+
+    setState(() {
+      currentDate = '$dayName, ${now.day} $monthName ${now.year}';
+      currentTime =
+          '${_twoDigits(now.hour)}:${_twoDigits(now.minute)}:${_twoDigits(now.second)}';
+    });
+  }
+
+  String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+  Future<void> _handleMethodCallback(MethodCall call, int fromWindowID) async {
+    if (call.method.toString() == "outletFullName") {
+      String name = call.arguments as String;
+      setState(() {
+        outletName = name;
+      });
+    }
+    if (call.method.toString() == "outletLogo") {
+      String logo = call.arguments as String;
+      setState(() {
+        outletLogo = logo;
+      });
+    }
+    if (call.method.toString() == "currentCallingQueue") {
+      String queueNumber = call.arguments as String;
+      setState(() {
+        currentQueue = queueNumber;
+      });
+    }
+    if (call.method.toString() == "queueCalling") {
+      List<dynamic> jsonList = jsonDecode(call.arguments as String);
+      setState(() {
+        readyQueue.clear();
+        readyQueue.addAll(
+          (jsonList).map((item) => {'number': item.toString()}).toList(),
+        );
+      });
+    }
+    if (call.method.toString() == "queueWaiting") {
+      List<dynamic> jsonList = jsonDecode(call.arguments as String);
+      setState(() {
+        preparingQueue.clear();
+        preparingQueue.addAll(
+          (jsonList).map((item) => {'number': item.toString()}).toList(),
+        );
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _updateDateTime(); // langsung update pertama
+    _timer =
+        Timer.periodic(const Duration(seconds: 1), (_) => _updateDateTime());
+
+    Future.delayed(const Duration(seconds: 5), () {
+      setState(() {
+        isLoading = false;
+      });
+    });
+    DesktopMultiWindow.setMethodHandler(_handleMethodCallback);
+    windowManager.addListener(this);
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    windowManager.removeListener(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,10 +155,11 @@ class _CustomerScreenState extends State<CustomerScreen> with WindowListener {
                   // Being Prepared Section
                   Expanded(
                     child: _buildQueueSection(
-                      title: 'SEDANG DIPERSIAPKAN',
+                      title: 'Sedang Dipersiapkan',
                       queueList: preparingQueue,
                       titleIcon: Icons.hourglass_top,
-                      color: Colors.orange[800]!,
+                      color: const Color(0xFFE9A95F),
+                      imageAssetPath: 'assets/images/pack.png',
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -67,10 +167,11 @@ class _CustomerScreenState extends State<CustomerScreen> with WindowListener {
                   // Ready to Pick Up Section
                   Expanded(
                     child: _buildQueueSection(
-                      title: 'ORDER SIAP DIAMBIL',
+                      title: 'Order Siap Diambil',
                       titleIcon: Icons.check_circle,
                       queueList: readyQueue,
-                      color: AppColors.confirm,
+                      color: const Color.fromARGB(255, 111, 189, 181),
+                      imageAssetPath: 'assets/images/ready.png',
                     ),
                   ),
                 ],
@@ -97,40 +198,44 @@ class _CustomerScreenState extends State<CustomerScreen> with WindowListener {
               child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.asset(
-                      'assets/images/sushi-tei.png',
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                      borderRadius: BorderRadius.circular(10),
+                      child: outletLogo.isNotEmpty
+                          ? Image.file(
+                              File(outletLogo),
+                              width: 300,
+                           
+                              fit: BoxFit.contain,
+                            )
+                          : const SizedBox()),
                 ],
               ),
             ),
-            const Expanded(
+            Expanded(
               flex: 4,
               child: TitleText(
-                text: 'Sushi Tei Teuku Daud',
+                text: outletName,
                 fontSize: 50,
                 fontWeight: FontWeight.w900,
                 textAlign: TextAlign.center,
+                color: const Color.fromARGB(255, 51, 56, 53)
               ),
             ),
-            const Expanded(
+            Expanded(
               child: Column(
                 children: [
                   AppText(
-                    text: 'Selasa, 10 Oktober 2023',
+                    text: currentDate,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                     textAlign: TextAlign.center,
+                    color: const Color(0xFF65766B),
                   ),
                   AppText(
-                    text: '10:30 AM',
+                    text: currentTime,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                     textAlign: TextAlign.center,
+                    color: const Color(0xFF65766B),
                   ),
                 ],
               ),
@@ -142,36 +247,55 @@ class _CustomerScreenState extends State<CustomerScreen> with WindowListener {
   }
 
   Widget _buildCurrentServingCard() {
-    return Card(
-      elevation: 8,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 24),
-        child: Column(
+    return SizedBox(
+      height: 300,
+      width: 350,
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Stack(
           children: [
-            AppText(
-              text: 'PANGGILAN SAAT INI',
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: AppColors.black,
+            Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: TextAnimator(
+                  currentQueue,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 120,
+                    letterSpacing: 1,
+                    wordSpacing: 1,
+                    color: Color.fromARGB(255, 51, 56, 53)
+                  ),
+                  incomingEffect:
+                      WidgetTransitionEffects.incomingSlideInFromBottom(
+                    duration: const Duration(milliseconds: 1500),
+                  ),
+                ),
+              ),
             ),
-             SizedBox(
-              width: 250,
-               child: Divider(
-                color: AppColors.black,
-                thickness: 1, // Ketebalan
-                height: 20, // Jarak vertikal
-                           ),
-             ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: AppText(
-                text: 'A100',
-                fontSize: 120,
-                fontWeight: FontWeight.bold,
-                color: AppColors.maroon,
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: Image.asset(
+                'assets/images/call.png',
+                width: 80,
+                height: 80,
+              ),
+            ),
+            const Positioned(
+              top: 20,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: AppText(
+                  text: 'Panggilan Saat Ini',
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: Color.fromARGB(255, 51, 56, 53)
+                ),
               ),
             ),
           ],
@@ -185,6 +309,7 @@ class _CustomerScreenState extends State<CustomerScreen> with WindowListener {
     required List<Map<String, dynamic>> queueList,
     required Color color,
     required IconData titleIcon,
+    required String imageAssetPath, // opsional
   }) {
     return Card(
       elevation: 5,
@@ -193,6 +318,7 @@ class _CustomerScreenState extends State<CustomerScreen> with WindowListener {
       ),
       child: Column(
         children: [
+// Header
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
@@ -225,34 +351,51 @@ class _CustomerScreenState extends State<CustomerScreen> with WindowListener {
               ],
             ),
           ),
+
+          // Expanded dibungkus Stack
           Expanded(
-            child: queueList.isEmpty
-                ? const Center(
-                    child: AppText(
-                      text: 'Tidak ada antrian',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(12),
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent:
-                          queueList.length <= 4 ? 200 : 120, // Responsif
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1,
-                    ),
-                    itemCount: queueList.length,
-                    itemBuilder: (context, index) {
-                      final item = queueList[index];
-                      return _buildQueueItem(
-                        number: item['number'],
-                        color: color,
-                        index: index,
-                      );
-                    },
+            child: Stack(
+              children: [
+                // Konten antrian
+                queueList.isEmpty
+                    ? const Center(
+                        child: AppText(
+                          text: 'Tidak ada antrian',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF65766B),
+                        ),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(12),
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: queueList.length <= 4 ? 200 : 120,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 1,
+                        ),
+                        itemCount: queueList.length,
+                        itemBuilder: (context, index) {
+                          final item = queueList[index];
+                          return _buildQueueItem(
+                            number: item['number'],
+                            color: color,
+                            index: index,
+                          );
+                        },
+                      ),
+
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Image.asset(
+                    imageAssetPath,
+                    width: 100,
+                    height: 100,
                   ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -284,17 +427,5 @@ class _CustomerScreenState extends State<CustomerScreen> with WindowListener {
         ),
       ),
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    windowManager.addListener(this);
-  }
-
-  @override
-  void dispose() {
-    windowManager.removeListener(this);
-    super.dispose();
   }
 }

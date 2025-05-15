@@ -49,6 +49,12 @@ dependencies:
   path_provider: ^2.1.5
   image_picker: ^1.1.2
   number_pagination: ^1.1.6
+  win32: ^5.5.0
+  widget_and_text_animator: ^1.1.5
+  win32audio: ^1.4.0
+  flutter_esc_pos_utils: ^1.0.1
+  thermal_printer: ^1.0.5
+  cron: ^0.6.2
 
 
 
@@ -77,9 +83,50 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
      - assets/images/logo.png
+     - assets/images/pack.png
+     - assets/images/call.png
+     - assets/images/ready.png
      - assets/images/sushi-tei.png
      - assets/images/llaollao.png
-  #   - images/a_dot_ham.jpeg
+     - assets/sounds/attention.wav
+     - assets/sounds/first.wav
+     - assets/sounds/last.wav
+     - assets/sounds/number/0.wav
+     - assets/sounds/number/1.wav
+     - assets/sounds/number/2.wav
+     - assets/sounds/number/3.wav
+     - assets/sounds/number/4.wav
+     - assets/sounds/number/5.wav
+     - assets/sounds/number/6.wav
+     - assets/sounds/number/7.wav
+     - assets/sounds/number/8.wav
+     - assets/sounds/number/9.wav
+     - assets/sounds/alphabet/A.wav
+     - assets/sounds/alphabet/B.wav
+     - assets/sounds/alphabet/C.wav
+     - assets/sounds/alphabet/D.wav
+     - assets/sounds/alphabet/E.wav
+     - assets/sounds/alphabet/F.wav
+     - assets/sounds/alphabet/G.wav
+     - assets/sounds/alphabet/H.wav
+     - assets/sounds/alphabet/I.wav
+     - assets/sounds/alphabet/J.wav
+     - assets/sounds/alphabet/K.wav
+     - assets/sounds/alphabet/L.wav
+     - assets/sounds/alphabet/M.wav
+     - assets/sounds/alphabet/N.wav
+     - assets/sounds/alphabet/O.wav
+     - assets/sounds/alphabet/P.wav
+     - assets/sounds/alphabet/Q.wav
+     - assets/sounds/alphabet/R.wav
+     - assets/sounds/alphabet/S.wav
+     - assets/sounds/alphabet/T.wav
+     - assets/sounds/alphabet/U.wav
+     - assets/sounds/alphabet/V.wav
+     - assets/sounds/alphabet/W.wav
+     - assets/sounds/alphabet/X.wav
+     - assets/sounds/alphabet/Y.wav
+     - assets/sounds/alphabet/Z.wav
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

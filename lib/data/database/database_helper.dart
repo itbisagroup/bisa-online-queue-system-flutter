@@ -3,6 +3,7 @@ import 'package:pickup_queue_system/data/Enum/shift_status.dart';
 import 'package:pickup_queue_system/data/model/outlet_model.dart';
 import 'package:pickup_queue_system/data/model/queue_model.dart';
 import 'package:pickup_queue_system/data/model/shift_model.dart';
+import 'package:pickup_queue_system/data/model/helper_note_model.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -66,8 +67,10 @@ class DatabaseHelper {
     CREATE TABLE Shift (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       shift_date TEXT NOT NULL,
+      shift_end_date TEXT,
       outlet_id INTEGER NOT NULL,
       status INTEGER DEFAULT 0,
+      is_synch INTEGER DEFAULT 0,
       createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (outlet_id) REFERENCES Outlet(id) ON DELETE CASCADE
@@ -84,11 +87,21 @@ class DatabaseHelper {
       call_count INTEGER DEFAULT 0,
       status INTEGER DEFAULT 1,
       shift_id INTEGER NOT NULL,
+      is_synch INTEGER DEFAULT 0,
       createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
       updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (shift_id) REFERENCES Shift(id) ON DELETE CASCADE
       UNIQUE(queue_number, shift_id) ON CONFLICT FAIL
     )
+  ''');
+
+    await db.execute('''
+    CREATE TABLE HelperNote (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+  )
   ''');
 
     // Create indexes for better performance
@@ -102,6 +115,16 @@ class DatabaseHelper {
     final maps = await db.query('Outlet', limit: 1);
     if (maps.isEmpty) return null;
     return Outlet.fromMap(maps.first);
+  }
+
+  Future<int> updateOutlet(Outlet outlet) async {
+    final db = await database;
+    return await db.update(
+      'Outlet',
+      outlet.toMap(),
+      where: 'id = ?',
+      whereArgs: [outlet.id],
+    );
   }
 
   Future<Shift?> getActiveShift(int outletId) async {
@@ -179,7 +202,7 @@ class DatabaseHelper {
       'Queue',
       where: whereConditions.join(' AND '),
       whereArgs: whereArgs,
-      orderBy: 'createdAt DESC',
+      orderBy: 'updatedAt DESC',
       limit: limit,
       offset: offset,
     );
@@ -221,4 +244,95 @@ class DatabaseHelper {
 
     return counts;
   }
+
+  // Add these methods to your DatabaseHelper class
+  Future<List<HelperNote>> getAllHelperNotes() async {
+    final db = await database;
+    final maps = await db.query('HelperNote');
+    return maps.map((map) => HelperNote.fromMap(map)).toList();
+  }
+
+  Future<int> insertHelperNote(HelperNote note) async {
+    final db = await database;
+    return await db.insert('HelperNote', note.toMap());
+  }
+
+  Future<int> deleteHelperNote(int id) async {
+    final db = await database;
+    return await db.delete(
+      'HelperNote',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<List<QueueModel>> getUnsyncedQueues() async {
+    final db = await database;
+    final maps = await db.query(
+      'Queue',
+      where: 'is_synch = ?',
+      whereArgs: [0],
+    );
+    return maps.map((map) => QueueModel.fromMap(map)).toList();
+  }
+
+  /// Get shifts that have unsynced queues
+  Future<List<Shift>> getShiftsWithUnsyncedQueues() async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT DISTINCT s.* FROM Shift s
+      JOIN Queue q ON q.shift_id = s.id
+      WHERE q.is_synch = 0
+    ''');
+    return maps.map((map) => Shift.fromMap(map)).toList();
+  }
+
+  /// Get unsynced queues for a specific shift
+  Future<List<QueueModel>> getUnsyncedQueuesByShift(int shiftId) async {
+    final db = await database;
+    final maps = await db.query(
+      'Queue',
+      where: 'shift_id = ? AND is_synch = ?',
+      whereArgs: [shiftId, 0],
+    );
+    return maps.map((map) => QueueModel.fromMap(map)).toList();
+  }
+
+  /// Mark multiple queues as synced
+  Future<int> markQueuesAsSynced(List<int> queueIds) async {
+    if (queueIds.isEmpty) return 0;
+
+    final db = await database;
+    return await db.update(
+      'Queue',
+      {'is_synch': 1},
+      where: 'id IN (${List.filled(queueIds.length, '?').join(',')})',
+      whereArgs: queueIds,
+    );
+  }
+
+  /// Mark a single queue as synced
+  Future<int> markQueueAsSynced(int queueId) async {
+    final db = await database;
+    return await db.update(
+      'Queue',
+      {'is_synch': 1},
+      where: 'id = ?',
+      whereArgs: [queueId],
+    );
+  }
+
+  Future<int> markShiftsAsSynced(List<int> shiftIds) async {
+    if (shiftIds.isEmpty) return 0;
+
+    final db = await database;
+    return await db.update(
+      'Shift',
+      {'is_synch': 1},
+      where: 'id IN (${List.filled(shiftIds.length, '?').join(',')})',
+      whereArgs: shiftIds,
+    );
+  }
+
+
 }

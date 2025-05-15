@@ -270,8 +270,8 @@ class AppDialog {
                                         horizontal: 24),
                                     shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(5)),
-                                    child:  AppText(
-                                        text: 'cancel'.tr,
+                                    child:  const AppText(
+                                        text: 'Batal',
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
                                         color: AppColors.white),

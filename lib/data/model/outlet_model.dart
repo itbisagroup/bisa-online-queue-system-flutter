@@ -36,7 +36,6 @@ class Outlet {
     this.description,
     this.createdAt,
     this.updatedAt,
-
   });
 
   Map<String, dynamic> toMap() {
@@ -80,6 +79,45 @@ class Outlet {
       description: map['description'],
       createdAt: map['createdAt'],
       updatedAt: map['updatedAt'],
+    );
+  }
+  Outlet copyWith({
+    int? id,
+    String? codeName,
+    String? fullName,
+    String? logo,
+    String? address,
+    String? phoneNumber,
+    String? subdistrict,
+    String? district,
+    String? city,
+    String? postalCode,
+    String? province,
+    String? country,
+    String? faxNumber,
+    String? emailAddress,
+    String? description,
+    String? createdAt,
+    String? updatedAt,
+  }) {
+    return Outlet(
+      id: id ?? this.id,
+      codeName: codeName ?? this.codeName,
+      fullName: fullName ?? this.fullName,
+      logo: logo ?? this.logo,
+      address: address ?? this.address,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      subdistrict: subdistrict ?? this.subdistrict,
+      district: district ?? this.district,
+      city: city ?? this.city,
+      postalCode: postalCode ?? this.postalCode,
+      province: province ?? this.province,
+      country: country ?? this.country,
+      faxNumber: faxNumber ?? this.faxNumber,
+      emailAddress: emailAddress ?? this.emailAddress,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

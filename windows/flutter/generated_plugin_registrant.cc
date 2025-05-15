@@ -12,6 +12,8 @@
 #include <flutter_secure_storage_windows/flutter_secure_storage_windows_plugin.h>
 #include <rive_common/rive_plugin.h>
 #include <screen_retriever_windows/screen_retriever_windows_plugin_c_api.h>
+#include <thermal_printer/thermal_printer_plugin.h>
+#include <win32audio/win32audio_plugin_c_api.h>
 #include <window_manager/window_manager_plugin.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
@@ -27,6 +29,10 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("RivePlugin"));
   ScreenRetrieverWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ScreenRetrieverWindowsPluginCApi"));
+  ThermalPrinterPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("ThermalPrinterPlugin"));
+  Win32audioPluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("Win32audioPluginCApi"));
   WindowManagerPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("WindowManagerPlugin"));
 }

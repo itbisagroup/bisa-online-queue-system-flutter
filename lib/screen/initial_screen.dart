@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pickup_queue_system/controller/initial_controller.dart';
 
-
 class InitialScreen extends GetView<InitialController> {
   const InitialScreen({super.key});
 
@@ -79,7 +78,7 @@ class InitialScreen extends GetView<InitialController> {
         labelText: 'Full Name*',
         border: OutlineInputBorder(),
       ),
-      onChanged: controller.fullName,
+      onChanged: controller.fullName.call,
       validator: (value) {
         if (value == null || value.isEmpty) {
           return 'Please enter full name';
@@ -95,7 +94,7 @@ class InitialScreen extends GetView<InitialController> {
         labelText: 'Code Name',
         border: OutlineInputBorder(),
       ),
-      onChanged: controller.codeName,
+      onChanged: controller.codeName.call,
     );
   }
 
@@ -106,7 +105,7 @@ class InitialScreen extends GetView<InitialController> {
         border: OutlineInputBorder(),
       ),
       maxLines: 3,
-      onChanged: controller.address,
+      onChanged: controller.address.call,
     );
   }
 
@@ -117,7 +116,7 @@ class InitialScreen extends GetView<InitialController> {
         border: OutlineInputBorder(),
       ),
       keyboardType: TextInputType.phone,
-      onChanged: controller.phoneNumber,
+      onChanged: controller.phoneNumber.call,
     );
   }
 
@@ -128,13 +127,26 @@ class InitialScreen extends GetView<InitialController> {
         style: ElevatedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
-        onPressed: controller.isLoading.value ? null : () async {
-          final success = await controller.saveOutlet();
-          if (success) {
-            Get.back();
-            Get.snackbar('Success', 'Outlet saved successfully');
-          }
-        },
+        onPressed: controller.isLoading.value
+            ? null
+            : () async {
+                final success = await controller.saveOutlet();
+                if (success) {
+                  Get.back();
+                  Get.snackbar(
+                    'Berhasil',
+                    'Outlet berhasil disimpan',
+                    snackPosition: SnackPosition.TOP,
+                    backgroundColor: Colors.green[400],
+                    colorText: Colors.white,
+                    borderRadius: 10,
+                    margin: const EdgeInsets.all(10),
+                    duration: const Duration(seconds: 2),
+                    icon: const Icon(Icons.check_circle_outline,
+                        color: Colors.white),
+                  );
+                }
+              },
         child: controller.isLoading.value
             ? const CircularProgressIndicator()
             : const Text('Save Outlet'),
