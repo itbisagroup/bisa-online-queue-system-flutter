@@ -13,7 +13,7 @@
 #include <flutter_window_close/flutter_window_close_plugin.h>
 #include <fullscreen_window/fullscreen_window_plugin_c_api.h>
 #include <rive_common/rive_plugin.h>
-#include <screen_retriever/screen_retriever_plugin.h>
+#include <screen_retriever_windows/screen_retriever_windows_plugin_c_api.h>
 #include <thermal_printer/thermal_printer_plugin.h>
 #include <url_launcher_windows/url_launcher_windows.h>
 #include <video_player_win/video_player_win_plugin_c_api.h>
@@ -34,8 +34,8 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("FullscreenWindowPluginCApi"));
   RivePluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("RivePlugin"));
-  ScreenRetrieverPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("ScreenRetrieverPlugin"));
+  ScreenRetrieverWindowsPluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("ScreenRetrieverWindowsPluginCApi"));
   ThermalPrinterPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ThermalPrinterPlugin"));
   UrlLauncherWindowsRegisterWithRegistrar(

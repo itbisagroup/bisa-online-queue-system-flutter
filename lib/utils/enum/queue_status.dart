@@ -27,9 +27,7 @@ extension QueueStatusExtension on QueueStatus {
         return 'cancelled';
       case QueueStatus.expired:
         return 'expired';
-      default:
-        return '';
-    }
+      }
   }
 
   IconData get icon {
@@ -48,9 +46,7 @@ extension QueueStatusExtension on QueueStatus {
         return Icons.cancel;
       case QueueStatus.expired:
         return Icons.help;
-      default:
-        return Icons.help;
-    }
+      }
   }
 
   Color get color {
@@ -69,8 +65,6 @@ extension QueueStatusExtension on QueueStatus {
         return const Color(0xFFFF0000);
       case QueueStatus.expired:
         return const Color(0xFF6699CC);
-      default:
-        return Colors.black;
-    }
+      }
   }
 }

@@ -707,7 +707,7 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
                                                             text:
                                                                 snapshot.data ??
                                                                     '',
-                                                            fontSize: 5.5.sp,
+                                                            fontSize: 20,
                                                             fontWeight:
                                                                 FontWeight.w700,
                                                             color: AppColors
@@ -730,7 +730,7 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
                                                             text:
                                                                 snapshot.data ??
                                                                     '',
-                                                            fontSize: 8.5.sp,
+                                                            fontSize: 20,
                                                             fontWeight:
                                                                 FontWeight.w700,
                                                             color:
@@ -805,7 +805,7 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
                                                       text: lang == 'id'
                                                           ? 'Antrean Sekarang'
                                                           : 'Current Serving',
-                                                      fontSize: 7.sp,
+                                                      fontSize: 30,
                                                       fontWeight:
                                                           FontWeight.w900,
                                                       color: AppColors.black,
@@ -1157,7 +1157,7 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
                                                                 'BISA Online Queue System V.${VersionApp.version}',
                                                             fontWeight:
                                                                 FontWeight.bold,
-                                                            fontSize: 5.sp,
+                                                            fontSize: 15,
                                                             maxLines: 1,
                                                             textAlign: TextAlign
                                                                 .center,
@@ -1169,7 +1169,7 @@ class _SecondaryWindowState extends State<SecondaryWindow> with WindowListener {
                                                             fontWeight:
                                                                 FontWeight
                                                                     .normal,
-                                                            fontSize: 5.sp,
+                                                            fontSize: 10,
                                                             maxLines: 1,
                                                             textAlign: TextAlign
                                                                 .center,

@@ -22,10 +22,12 @@ class ConfigController extends GetxController {
   var fullscreenTimerSelected = 2.obs;
   var adsMutedStatus = true.obs;
   var autoFullscreenStatus = true.obs;
+  var showQrOnPrint = true.obs;
   List<int> items = [1, 2, 5, 10];
   final storage = const FlutterSecureStorage();
   final adminController = Get.find<AdminController>();
   var isLoading = false.obs;
+  
   @override
   void onInit() async {
     super.onInit();
@@ -49,6 +51,7 @@ class ConfigController extends GetxController {
     final autoFullscreenTimer =
         await storage.read(key: 'auto_fullscreen_timer');
     final adsMuted = await storage.read(key: 'ads_muted');
+    final showQr = await storage.read(key: 'show_qr');
 
     if (url != null) {
       urlController.text = url;
@@ -76,6 +79,9 @@ class ConfigController extends GetxController {
     }
     if (autoFullscreen != null) {
       autoFullscreenStatus.value = autoFullscreen == '1' ? true : false;
+    }
+    if (showQr != null) {
+      showQrOnPrint.value = showQr == 'true' ? true : false;
     }
     isLoading(false);
   }
@@ -178,5 +184,15 @@ class ConfigController extends GetxController {
     await storage.write(
         key: 'ads_muted', value: adsMutedStatus.value == true ? '1' : '0');
   }
-  
+
+  void toggleShowQr(bool showQr) async {
+    showQrOnPrint.value = showQr;
+    await storage.delete(key: 'show_qr');
+    await storage.write(
+        key: 'show_qr', value: showQr == true ? 'true' : 'false');
+    AppDialog.showToastSuccess(
+        title: 'success'.tr, 
+        desc: 'environment_updated'.tr, 
+        func: () {});
+  }
 }

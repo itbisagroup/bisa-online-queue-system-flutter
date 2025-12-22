@@ -11,12 +11,11 @@ class DialogError extends StatelessWidget {
   final PreferredSize appBar;
 
   const DialogError(
-      {Key? key,
+      {super.key,
       required this.onTryAgain,
       required this.title,
       required this.appBar,
-      required this.description})
-      : super(key: key);
+      required this.description});
 
   @override
   Widget build(BuildContext context) {
@@ -90,12 +89,11 @@ class ShiftNotFound extends StatelessWidget {
   final PreferredSize appBar;
 
   const ShiftNotFound(
-      {Key? key,
+      {super.key,
       required this.onTryAgain,
       required this.title,
       required this.appBar,
-      required this.description})
-      : super(key: key);
+      required this.description});
 
   @override
   Widget build(BuildContext context) {

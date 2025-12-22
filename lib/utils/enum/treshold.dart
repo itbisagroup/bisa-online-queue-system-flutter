@@ -19,8 +19,6 @@ extension ThresholdExtension on ThresholdError {
         return 'emergency';
       case ThresholdError.critical:
         return 'critical';
-      default:
-        return '';
-    }
+      }
   }
 }

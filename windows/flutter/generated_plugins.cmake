@@ -10,7 +10,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_window_close
   fullscreen_window
   rive_common
-  screen_retriever
+  screen_retriever_windows
   thermal_printer
   url_launcher_windows
   video_player_win

@@ -32,7 +32,7 @@ class ConfigView extends GetView<ConfigController> {
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     color: AppColors.white,
-                    height: 450,
+                    height: 500,
                     width: 450,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
@@ -230,7 +230,7 @@ class ConfigView extends GetView<ConfigController> {
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     color: AppColors.white,
-                    height: 450,
+                    height: 500,
                     width: 450,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
@@ -381,7 +381,7 @@ class ConfigView extends GetView<ConfigController> {
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     color: AppColors.white,
-                    height: 450,
+                    height: 500,
                     width: 450,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
@@ -569,7 +569,7 @@ class ConfigView extends GetView<ConfigController> {
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     color: AppColors.white,
-                    height: 450,
+                    height: 500,
                     width: 450,
                     child: Column(
                         mainAxisAlignment: MainAxisAlignment.start,
@@ -625,7 +625,6 @@ class ConfigView extends GetView<ConfigController> {
                                   side: const BorderSide(
                                       color: Colors.transparent),
                                   onSelected: (selected) {
-                                    // Disable jika sudah aktif
                                     if (!controller
                                         .adminController.isEnglishApp.value) {
                                       controller.adminController.lang();
@@ -648,7 +647,6 @@ class ConfigView extends GetView<ConfigController> {
                                   side: const BorderSide(
                                       color: Colors.transparent),
                                   onSelected: (selected) {
-                                    // Disable jika sudah aktif
                                     if (controller
                                         .adminController.isEnglishApp.value) {
                                       controller.adminController.lang();
@@ -693,7 +691,6 @@ class ConfigView extends GetView<ConfigController> {
                                   side: const BorderSide(
                                       color: Colors.transparent),
                                   onSelected: (selected) {
-                                    // Disable jika sudah aktif
                                     if (!controller.adminController
                                         .isEnglishPrinter.value) {
                                       controller.adminController.langPrinter();
@@ -716,7 +713,6 @@ class ConfigView extends GetView<ConfigController> {
                                   side: const BorderSide(
                                       color: Colors.transparent),
                                   onSelected: (selected) {
-                                    // Disable jika sudah aktif
                                     if (controller.adminController
                                         .isEnglishPrinter.value) {
                                       controller.adminController.langPrinter();
@@ -760,6 +756,22 @@ class ConfigView extends GetView<ConfigController> {
                                   .adminController.isCronRunning.value,
                               onChanged: (value) {
                                 controller.toggleCron(value);
+                              },
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 10,
+                          ),
+                          AppText(
+                              text: "show_qr_print".tr,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppColors.maroon),
+                          Obx(
+                            () => Switch(
+                              value: controller.showQrOnPrint.value,
+                              onChanged: (value) {
+                                controller.toggleShowQr(value);
                               },
                             ),
                           ),

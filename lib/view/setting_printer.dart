@@ -74,7 +74,7 @@ class PrinterSettingView extends GetView<PrinterController> {
                     ),
                   ),
                   DropdownButtonFormField<PrinterType>(
-                    value: controller.defaultPrinterType.value,
+                    initialValue: controller.defaultPrinterType.value,
                     decoration:  InputDecoration(
                       prefixIcon: const Icon(
                         Icons.print,

@@ -20,7 +20,7 @@ import 'package:widget_and_text_animator/widget_and_text_animator.dart';
 import '../data/response/status.dart';
 
 class AdminView extends GetView<AdminController> {
-  const AdminView({Key? key}) : super(key: key);
+  const AdminView({super.key});
 
   @override
   Widget build(BuildContext context) {

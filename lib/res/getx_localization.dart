@@ -168,6 +168,7 @@ class Language extends Translations {
           'language': 'Language',
           'choose_language': ' Screen Display',
           'language_print': 'Paper Printout',
+          'show_qr_print': 'Show QR Code on Printout',
         },
         'id': {
           'queue': 'Antrean',
@@ -338,7 +339,7 @@ class Language extends Translations {
           'language': 'Bahasa',
           'choose_language': 'Tampilan Layar',
           'language_print': 'Cetakan Kertas',
-
+          'show_qr_print': 'Tampilkan Kode QR pada Cetakan',
         }
       };
 }

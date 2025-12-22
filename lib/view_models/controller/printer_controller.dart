@@ -236,14 +236,14 @@ class PrinterController extends GetxController {
       String cancelCode, int callCount) async {
     List<int> bytes = [];
     final langPrint = await _secureStorage.read(key: 'lang_print');
+    final showQr = await _secureStorage.read(key: 'show_qr');
+    final bool shouldShowQr =
+        showQr == 'true' || showQr == null; // default true jika null
+
     final printerLang = PrinterLang(langPrint ?? 'en');
     final profile = await CapabilityProfile.load(name: 'XP-N160I');
     final generator = Generator(PaperSize.mm80, profile);
-    bytes += generator.qrcode(
-      '',
-      size: QRSize.size1,
-      align: PosAlign.center,
-    );
+
     // Title Section
     bytes += generator.text(title.toUpperCase(),
         styles: const PosStyles(
@@ -267,33 +267,33 @@ class PrinterController extends GetxController {
         ),
         linesAfter: 1);
 
-    // QR Code Section
-    bytes += generator.text(
-      printerLang.customMessage('scan_instruction'),
-      styles: const PosStyles(
+    // QR Code Section - Hanya tampilkan jika shouldShowQr = true
+    if (shouldShowQr) {
+      bytes += generator.text(
+        printerLang.customMessage('scan_instruction'),
+        styles: const PosStyles(
+          align: PosAlign.center,
+        ),
+      );
+      bytes += generator.qrcode(
+        qrCode,
+        size: QRSize.size8,
         align: PosAlign.center,
-      ),
-    );
-    bytes += generator.qrcode(
-      qrCode,
-      size: QRSize.size8,
-      align: PosAlign.center,
-    );
-
-    // Cancel Code Section
-    bytes += generator.text(
-      printerLang.customMessage('cancel_instruction'),
-      styles: const PosStyles(
-        align: PosAlign.center,
-      ),
-    );
-    bytes += generator.text(cancelCode,
-        styles:
-            const PosStyles(align: PosAlign.center, width: PosTextSize.size2),
-        linesAfter: 1);
+      );
+      // Cancel Code Section
+      bytes += generator.text(
+        printerLang.customMessage('cancel_instruction'),
+        styles: const PosStyles(
+          align: PosAlign.center,
+        ),
+      );
+      bytes += generator.text(cancelCode,
+          styles:
+              const PosStyles(align: PosAlign.center, width: PosTextSize.size2),
+          linesAfter: 1);
+    }
 
     // Footer Line
-
     bytes += generator.text(
       printerLang.customMessage(
         'note',
@@ -303,10 +303,11 @@ class PrinterController extends GetxController {
       ),
     );
     bytes += generator.text(
-      '${printerLang.customMessage('note_cancel',
-              placeholders: {'callCount': callCount.toString()})} ${printerLang.customMessage(
-            callCount > 1 ? 'plural_call' : 'singular_call',
-          )}',
+      '${printerLang.customMessage('note_cancel', placeholders: {
+            'callCount': callCount.toString()
+          })} ${printerLang.customMessage(
+        callCount > 1 ? 'plural_call' : 'singular_call',
+      )}',
       styles: const PosStyles(
         align: PosAlign.center,
       ),
@@ -336,6 +337,7 @@ class PrinterController extends GetxController {
         align: PosAlign.center,
       ),
     );
+
     // Print command
     printEscPos(bytes, generator);
   }
@@ -476,79 +478,96 @@ class PrinterController extends GetxController {
     String outlet,
     String startShift,
     String endShift,
-    ShiftDetails? shiftDetails, // Menambahkan parameter shiftDetails
+    ShiftDetails? shiftDetails,
   ) async {
     List<int> bytes = [];
 
     final profile = await CapabilityProfile.load(name: 'XP-N160I');
     final generator = Generator(PaperSize.mm58, profile);
+
     bytes +=
         generator.setStyles(const PosStyles().copyWith(align: PosAlign.center));
     bytes += generator.setGlobalCodeTable('CP1252');
-    bytes += generator.text(outlet.toUpperCase(),
-        styles: const PosStyles(
-          align: PosAlign.center,
-          width: PosTextSize.size2,
-          height: PosTextSize.size2,
-        ),
-        linesAfter: 2);
+    bytes += generator.text(
+      outlet.toUpperCase(),
+      styles: const PosStyles(
+        align: PosAlign.center,
+        width: PosTextSize.size2,
+        height: PosTextSize.size2,
+      ),
+      linesAfter: 2,
+    );
 
+    // Start & End Shift
     bytes += generator.row([
       PosColumn(text: 'start_shift'.tr, width: 5, styles: const PosStyles()),
       PosColumn(
-          text: ': $startShift',
-          width: 7,
-          styles: const PosStyles(
-            align: PosAlign.right,
-          )),
+        text: ': $startShift',
+        width: 7,
+        styles: const PosStyles(align: PosAlign.right),
+      ),
     ]);
     bytes += generator.row([
       PosColumn(text: 'end_shift_at'.tr, width: 5, styles: const PosStyles()),
       PosColumn(
-          text: ': $endShift',
-          width: 7,
-          styles: const PosStyles(
-            align: PosAlign.right,
-          )),
+        text: ': $endShift',
+        width: 7,
+        styles: const PosStyles(align: PosAlign.right),
+      ),
     ]);
+
     bytes += generator.emptyLines(1);
 
-    // Mencetak data queues
+    // Queue data
     if (shiftDetails?.queues != null) {
       bytes += generator.row([
         PosColumn(text: 'queue_count'.tr, width: 5, styles: const PosStyles()),
         PosColumn(
-            text: ': ${shiftDetails!.queues!.count} ${'queue'.tr}',
-            width: 7,
-            styles: const PosStyles(
-              align: PosAlign.right,
-            )),
+          text: ': ${shiftDetails!.queues!.count} ${'queue'.tr}',
+          width: 7,
+          styles: const PosStyles(align: PosAlign.right),
+        ),
       ]);
       bytes += generator.row([
         PosColumn(
             text: 'Total ${'queue'.tr}', width: 5, styles: const PosStyles()),
         PosColumn(
-            text: ': ${shiftDetails.queues!.total} Pax',
-            width: 7,
-            styles: const PosStyles(
-              align: PosAlign.right,
-            )),
+          text: ': ${shiftDetails.queues!.total} Pax',
+          width: 7,
+          styles: const PosStyles(align: PosAlign.right),
+        ),
       ]);
     }
+
     bytes += generator.emptyLines(1);
 
-    // Mencetak status
+    // Status section
     bytes += generator.text('shift_overview'.tr, styles: const PosStyles());
     for (var status in shiftDetails?.status ?? []) {
+      // Baris 1: Status + Count
       bytes += generator.row([
         PosColumn(
-            text: status.label ?? '', width: 4, styles: const PosStyles()),
+          text: status.label ?? '',
+          width: 7,
+          styles: const PosStyles(align: PosAlign.left),
+        ),
         PosColumn(
-            text: '${'count'.tr}: ${status.count}, Total: ${status.total}',
-            width: 8,
-            styles: const PosStyles(
-              align: PosAlign.right,
-            )),
+          text: '${'count'.tr}: ${status.count}',
+          width: 5,
+          styles: const PosStyles(align: PosAlign.right),
+        ),
+      ]);
+      // Baris 2: Kosong (untuk label) + Total
+      bytes += generator.row([
+        PosColumn(
+          text: '', // kolom kosong
+          width: 7,
+        ),
+        PosColumn(
+          text: 'Total: ${status.total}',
+          width: 5,
+          styles: const PosStyles(align: PosAlign.right),
+        ),
       ]);
     }
 
@@ -556,17 +575,13 @@ class PrinterController extends GetxController {
 
     bytes += generator.text(
       'BISA Online Queue System V.${VersionApp.version}',
-      styles: const PosStyles(
-        align: PosAlign.center,
-      ),
+      styles: const PosStyles(align: PosAlign.center),
     );
 
     final printAt = DateFormat('dd/MM/yyyy HH:mm:ss').format(DateTime.now());
     bytes += generator.text(
       '${'printed_at'.tr} $printAt',
-      styles: const PosStyles(
-        align: PosAlign.center,
-      ),
+      styles: const PosStyles(align: PosAlign.center),
     );
 
     printEscPos(bytes, generator);
@@ -606,7 +621,6 @@ class PrinterController extends GetxController {
               type: bluetoothPrinter.typePrinter,
               model: TcpPrinterInput(ipAddress: bluetoothPrinter.address!));
           break;
-        default:
       }
       if (bluetoothPrinter.typePrinter == PrinterType.bluetooth &&
           Platform.isAndroid) {
@@ -656,7 +670,6 @@ class PrinterController extends GetxController {
             model: TcpPrinterInput(ipAddress: selectedPrinter.value.address!));
         isConnected.value = true;
         break;
-      default:
     }
     await saveSettingStorage();
   }

@@ -39,6 +39,10 @@ Future<void> main(List<String> args) async {
     if (langPrint == null) {
       await const FlutterSecureStorage().write(key: 'lang_print', value: 'id');
     }
+    final showQr = await const FlutterSecureStorage().read(key: 'show_qr');
+    if (showQr == null) {
+      await const FlutterSecureStorage().write(key: 'show_qr', value: 'true');
+    }
     runApp(QueueApp(
       lang: lang ?? 'en',
     ));

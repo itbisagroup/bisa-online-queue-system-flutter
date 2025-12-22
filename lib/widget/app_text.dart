@@ -11,7 +11,7 @@ class TitleText extends StatelessWidget {
   final int maxLines;
 
   const TitleText({
-    Key? key,
+    super.key,
     required this.text,
     this.fontSize = 12, // Default to normal size
     this.color = Colors.black,
@@ -20,7 +20,7 @@ class TitleText extends StatelessWidget {
     this.overflow = TextOverflow.ellipsis,
     this.maxLines = 1,
     this.fontStyle = FontStyle.normal,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +60,7 @@ class AppText extends StatelessWidget {
   final int maxLines;
 
   const AppText({
-    Key? key,
+    super.key,
     required this.text,
     this.fontSize = 12.0,
     this.color = Colors.black,
@@ -69,7 +69,7 @@ class AppText extends StatelessWidget {
     this.overflow = TextOverflow.ellipsis,
     this.maxLines = 1,
     this.fontStyle = FontStyle.normal,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
